@@ -1,0 +1,59 @@
+{
+  "slug": "01-setup",
+  "title": "01 · 环境、版本与第一次运行",
+  "chapter": "基础篇",
+  "level": "入门",
+  "minutes": 35,
+  "summary": "把版本兼容性变成可以检查的事实。先建立隔离环境，再运行一个无需密钥的真实 Agent 图。",
+  "goals": [
+    "理解 langchain、core、provider 与 langgraph 的分工",
+    "安装锁定环境并完成导入和运行验证",
+    "正确区分离线阅读、离线实验和在线模型"
+  ],
+  "prerequisites": [
+    "Python 基础",
+    "终端与目录的基本操作"
+  ],
+  "sections": [
+    {
+      "id": "versions",
+      "title": "选择可复现的版本组合",
+      "body": "<p>本教程所说的 LangChain 1.2 指 <strong>Python 包 langchain==1.2.0</strong>，不是 JavaScript 的同名版本，也不是声称它是当前最新版。Python 官方依赖范围从 3.10 起；本交付实际验证环境为 Windows + Python 3.12.10，推荐按同一主次版本复现。</p><table><thead><tr><th>依赖</th><th>固定版本</th><th>作用</th></tr></thead><tbody><tr><td>langchain</td><td>1.2.0</td><td>create_agent 与中间件</td></tr><tr><td>langchain-core</td><td>1.2.5</td><td>消息、模板、Runnable、工具抽象</td></tr><tr><td>langgraph / langgraph-prebuilt</td><td>1.0.5 / 1.0.5</td><td>图执行、检查点与工具节点</td></tr><tr><td>langchain-openai</td><td>1.1.6</td><td>可选的真实模型连接</td></tr><tr><td>langchain-text-splitters</td><td>1.1.0</td><td>RAG 文本切分</td></tr><tr><td>numpy / pygments</td><td>2.2.6 / 2.19.2</td><td>本地向量计算 / 构建时高亮</td></tr></tbody></table><p><code>requirements.txt</code> 表达直接依赖；<code>requirements.lock.txt</code> 固定验证环境的全部传递依赖。包版本不要求数字一致：LangChain 与 LangGraph 各自发布。学习时使用锁文件；升级时在新环境重新运行回归，而不是假设一个兼容区间代表所有组合都工作。</p>"
+    },
+    {
+      "id": "install",
+      "title": "安装与路径约定",
+      "body": "<p>以下命令都在解压后的 <code>langchain-1.2-tutorial</code> 根目录执行。路径可按实际位置修改，避免把代码文件命名为 <code>langchain.py</code> 或 <code>openai.py</code>，否则会遮蔽安装包。</p><pre><code class=\"language-powershell\"># Windows PowerShell\npython -m venv .venv\n.\\.venv\\Scripts\\python.exe -m pip install -r requirements.lock.txt\n.\\.venv\\Scripts\\python.exe examples/01_check_environment.py\n# 后续命令可继续使用完整 python 路径，无需修改执行策略</code></pre><pre><code class=\"language-bash\"># macOS / Linux\npython3.12 -m venv .venv\nsource .venv/bin/activate\npython -m pip install -r requirements.lock.txt\npython examples/01_check_environment.py</code></pre><p>正文为了简洁使用 <code>python examples/...</code>。请先激活环境，或把 <code>python</code> 替换为上面的虚拟环境解释器完整路径。运行脚本时保留整个 <code>examples</code> 目录，因为各文件可能复用 <code>common.py</code> 和 <code>rag_support.py</code>。直接复制单个代码块到别处需要一并复制这些辅助文件。</p><div class=\"warning\"><strong>实际遇到的依赖坑：</strong>安装器曾选择 <code>langgraph-prebuilt==1.0.10</code>；<code>pip check</code> 报告正常，但它导入旧 LangGraph 中不存在的 <code>ExecutionInfo</code>，运行即失败。锁定 <code>prebuilt==1.0.5</code> 后导入与执行通过。依赖元数据检查不能代替真实导入测试。</div>"
+    },
+    {
+      "id": "check",
+      "title": "你的第一个验收脚本",
+      "body": "<example path=\"examples/01_check_environment.py\"></example><p>前半段逐一核对核心版本；后半段创建真实 <code>create_agent</code> 执行图，传入一个用户消息，并检查最后一条助手消息。这里的 <code>ScriptedChatModel</code> 只是按预设顺序返回答案的测试替身，因此不需要外部模型。</p><p><strong>预期结果：</strong>看到六行固定包版本，最后输出 <code>PASS: imports + a real agent graph invocation</code>。如果失败，先检查命令使用的是哪个 Python，再看第一个异常，不要直接升级所有包。库导入失败和服务端 401 属于完全不同的排错层次。</p>"
+    },
+    {
+      "id": "live",
+      "title": "切换到真实模型",
+      "body": "<p>部分脚本提供 <code>--live</code>。共用 <a href=\"examples/common.py\">common.py</a> 中的 <code>live_model()</code> 从环境读取模型名与密钥，再构造 <code>ChatOpenAI</code>。你需要选择账号实际可用、支持相应工具调用或结构化输出的模型。不同模型能力不同，教程不硬编码未来可能失效的模型名。</p><pre><code class=\"language-powershell\">$env:OPENAI_MODEL = \"替换为账号可用的模型标识\"\n# 隐藏输入，避免把密钥明文写入命令历史或教程文件\n$credential = Get-Credential -UserName \"api-key\" -Message \"把 API 密钥填入密码框\"\n$env:OPENAI_API_KEY = $credential.GetNetworkCredential().Password\npython examples/07_agents.py --live\nRemove-Item Env:OPENAI_API_KEY</code></pre><p>这里用到的是显式环境变量，教程不自动读取 <code>.env</code>。真实输出不保证与离线文本一致，应验证有无工具调用、参数是否合规、工具结果是否支撑最终结论。未配置密钥时离线章节仍可全部阅读与运行；交付验证没有请求收费模型 API。</p><p>共用连接设置请求超时与有限重试，减少无期限等待。它们不是完整成本上限：工具循环和并发请求还需要 12 的调用预算。若替换其他提供商，单独锁定其适配包，并重新测试消息格式和工具能力。</p>"
+    },
+    {
+      "id": "offline-install",
+      "title": "在断网环境运行 Python",
+      "body": "<p>阅读站点不需安装任何包；执行 Python 需要依赖。可在与目标机器相同操作系统、CPU 架构和 Python 版本的联网机器准备 wheelhouse，再把整个目录复制过去：</p><pre><code class=\"language-bash\">python -m pip download -r requirements.lock.txt --only-binary=:all: -d wheelhouse\n# 在断网机器的虚拟环境中：\npython -m pip install --no-index --find-links=wheelhouse -r requirements.lock.txt\npython examples/01_check_environment.py</code></pre><p>交付包不包含 wheelhouse，也不包含在线模型权重。固定脚本模型不下载权重；后续的关键词向量器同样在本机计算。跨平台移动 wheelhouse 可能遇到 NumPy 等二进制 wheel 不匹配，不能只看文件数量相同就认为可安装。</p>"
+    },
+    {
+      "id": "exercises",
+      "title": "练习与验收",
+      "body": "<ol><li><strong>基础：</strong>完成安装并保存校验输出。验收：版本正确且最后一行 PASS。</li><li><strong>进阶：</strong>对比 <code>python -m pip check</code> 与环境脚本各证明什么。验收：前者检查依赖声明，后者检查真实导入及一次图执行。</li><li><strong>挑战：</strong>制作离线安装包，在新虚拟环境用 <code>--no-index</code> 安装并运行。验收：安装无网络索引访问，Agent 图仍通过；真实模型仍需要联网。</li></ol><p>下一章把“消息列表”拆开来看：模型看到的并不是一个随意拼接的字符串，而是带角色和结构的输入。</p>"
+    }
+  ],
+  "sources": [
+    {
+      "title": "langchain 1.2.0 元数据",
+      "url": "https://pypi.org/project/langchain/1.2.0/"
+    },
+    {
+      "title": "pip 离线安装与本地包",
+      "url": "https://pip.pypa.io/en/stable/user_guide/#installing-from-local-packages"
+    }
+  ]
+}

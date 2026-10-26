@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "browser": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "network": "offline emulation; file:// pages",
+  "desktop_viewport": [
+    1440,
+    1000
+  ],
+  "mobile_viewport": [
+    390,
+    844
+  ],
+  "pages_each_viewport": 22,
+  "checks": [
+    "all 22 pages render offline",
+    "no page overflow in both viewports",
+    "chapter navigation",
+    "static syntax highlighting",
+    "completion/reload",
+    "search",
+    "progress file import/export",
+    "mobile menu",
+    "storage denied navigation fallback",
+    "no remote page resource requests",
+    "no JS exceptions"
+  ],
+  "remote_requests": [],
+  "javascript_errors": [],
+  "limitations": [
+    "Chrome on Windows only; browser policies differ.",
+    "No real model API calls."
+  ]
+}

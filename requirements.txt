@@ -1,0 +1,9 @@
+# Teaching baseline; use requirements.lock.txt for the validated full environment.
+langchain==1.2.0
+langchain-core==1.2.5
+langgraph==1.0.5
+langgraph-prebuilt==1.0.5
+langchain-openai==1.1.6
+langchain-text-splitters==1.1.0
+pygments==2.19.2
+numpy==2.2.6

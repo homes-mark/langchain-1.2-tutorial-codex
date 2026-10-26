@@ -1,0 +1,23 @@
+{
+  "slug": "20-migration",
+  "title": "20 · 迁移与排错：读懂新旧代码的边界",
+  "chapter": "附录与交接",
+  "level": "进阶",
+  "minutes": 40,
+  "summary": "把旧版教程中的 Chain、Memory 和 Agent 写法映射到 1.2 路径，用实际导入与执行定位依赖问题。",
+  "goals": ["识别旧版导入与当前接口的差异", "按照解释器、版本、导入、执行的顺序排错", "理解 pip check 通过仍可能出现运行时不兼容"],
+  "prerequisites": ["至少完成 01 环境、04 链、07 Agent", "记忆相关迁移建议先完成 08 Memory"],
+  "sections": [
+    {"id": "map", "title": "先判断旧代码属于哪一代", "body": "<p>迁移前先记录旧环境、旧代码的真实输入输出和测试样本。不要同时改模型、提示、检索器与依赖版本，否则出现行为变化时很难定位原因。此教程面向 Python LangChain 1.2，使用固定的 1.2.0 基线；网上标着“LangChain 教程”的内容可能来自完全不同的版本。</p><table><thead><tr><th>旧写法或概念</th><th>本教程路径</th><th>迁移时检查什么</th></tr></thead><tbody><tr><td>LLMChain、ConversationChain</td><td>用 Runnable / LCEL 表达固定流程</td><td>返回字典还是字符串、历史如何传入</td></tr><tr><td>ConversationBufferMemory</td><td>显式消息历史，或 Agent state + checkpointer</td><td>线程隔离、持久化和上下文预算</td></tr><tr><td>langgraph.prebuilt.create_react_agent</td><td>langchain.agents.create_agent</td><td>system_prompt、middleware、输入状态</td></tr><tr><td>旧 AgentExecutor 手工组合</td><td>优先使用 create_agent</td><td>工具、停止条件、回传键与异常路径</td></tr><tr><td>from langchain.prompts import ...</td><td>from langchain_core.prompts import ...</td><td>实际安装包与模块路径</td></tr><tr><td>各提供商旧的集中导入</td><td>对应集成包，如 langchain_openai</td><td>集成包必须单独安装并锁版本</td></tr></tbody></table><p>这是概念与用法迁移，不是机械替换类名。旧功能的一部分位于 <code>langchain-classic</code>；它可以服务于旧项目维护，但不属于本教程基线依赖。不要为了让一行旧 import 暂时成功，就把不同年代的示例混在同一个新项目里。</p>"},
+    {"id": "semantics", "title": "迁移不能只看 import 是否成功", "body": "<p>旧链可能返回带有 output 字段的字典，本教程的 <code>prompt | model | StrOutputParser()</code> 返回字符串。Agent 的 <code>invoke</code> 返回状态，最终文本通常从 messages 的末条消息读取；结构化结果则按所用策略从 structured_response 读取。接口类型变了，下游代码也要跟着检查。</p><p>记忆迁移尤其不能只换构造函数。短期记忆关联线程历史，长期记忆关联跨线程存储；两者都不等于把整个聊天塞回提示。原先全局共享的 Memory 还可能造成用户数据串线。迁移后至少验证两个不同线程、两名不同用户以及进程重启后的行为。</p><p>create_react_agent 的旧 prompt 参数不能无条件照搬到新接口；固定系统提示使用 system_prompt，动态提示与模型前后处理使用相应 middleware。传入 create_agent 的模型也不应先随意 bind_tools 再期待所有结构化输出策略正常工作。先采用本教程已运行的最小例子，再逐项恢复业务功能。</p>"},
+    {"id": "diagnose", "title": "按四层顺序排错", "body": "<ol><li><strong>解释器：</strong>确认终端使用了预期虚拟环境。优先使用 <code>python -m pip</code>，避免 pip 与 python 指向不同安装。</li><li><strong>依赖：</strong>打印实际版本，而不是只看 requirements 文件。文件描述计划，已安装环境才决定执行结果。</li><li><strong>导入：</strong>确认模块属于 core、提供商集成、LangGraph 还是旧 classic 包。检查项目中是否有 langchain.py、openai.py 等同名文件遮蔽包。</li><li><strong>最小执行：</strong>导入后真正创建 Agent 并 invoke 一次，接着运行工具、记忆、检索的独立检查。最后再回到完整项目。</li></ol><p>执行 <code>python examples/01_check_environment.py</code>，它同时检查精确版本、真实导入与一次 Agent 图调用。脚本无密钥、不联网，完整依赖由锁文件固定。</p><example path=\"examples/01_check_environment.py\"></example><p>版本不符时应先比较预期和实际环境，再在独立虚拟环境重建锁文件基线。不要在缺少诊断时反复执行“升级所有包”，那会让错误更难复现。</p>"},
+    {"id": "real-pitfall", "title": "真实踩坑：pip check 通过，导入仍失败", "body": "<p>本教程制作时遇到一组具体问题：<code>langgraph==1.0.5</code> 与 <code>langgraph-prebuilt==1.0.10</code> 的依赖元数据检查可以通过，但实际导入出现与 <code>ExecutionInfo</code> 相关的 ImportError。最终将 prebuilt 固定为 <code>1.0.5</code>，并重新运行 Agent 示例确认恢复。</p><p>原因在于 <code>pip check</code> 主要检查已声明的包版本约束，不能证明包之间所有实际符号都兼容。完整验证至少包括：依赖解析通过、关键模块可导入、代表性功能可运行。当前基线已把两者锁为 1.0.5；完整的间接依赖见 requirements.lock.txt。</p><p>另一个可复现的环境差异是 Windows 受限沙箱：本次验证中，连最小 asyncio.run 都可能在创建本地 socketpair 时等待，沙箱外同一示例正常完成。因此异步挂起时应先用最小 asyncio 程序判断是运行环境问题还是业务逻辑问题，不要直接删掉异步实现。</p>"},
+    {"id": "docs-drift", "title": "最新官方文档也需要版本判断", "body": "<p>官方在线文档会持续更新。核对时，流式页面已推荐 1.3 引入的 event streaming，并展示 <code>stream_events(..., version='v3')</code>。这不是本教程 1.2.0 的 API，不能因为它来自官方页面就直接复制进锁定环境。</p><p>本教程使用 1.2.0 环境里实际运行的 <code>stream</code>、<code>astream</code> 及对应 stream_mode。阅读文档时同时检查引入版本、已安装源码、函数签名和最小验证。升级教程时要一起更新代码、锁文件、内容、测试结果与交接文件，不能只把页脚的版本数字改大。</p>"},
+    {"id": "practice", "title": "排错练习与验收", "body": "<ol><li><strong>入门：</strong>运行环境检查并保存输出。验收条件：精确版本符合 EXPECTED，末行显示真实 Agent 调用通过。</li><li><strong>进阶：</strong>找一段旧 LLMChain 示例，只迁移“提示 → 模型 → 文本解析”，用固定输入比较返回类型和内容。验收条件：明确列出需要同步修改的下游取值代码。</li><li><strong>挑战：</strong>为一个旧记忆流程写迁移验收清单：同线程延续、不同线程隔离、不同租户隔离、重启恢复、工具调用消息配对。先在纸面说明预期，再运行对应示例；不要为了演示依赖冲突破坏现有环境。</li></ol><p>完成后到 <a href=\"21-reference.html\">21 术语、目录与交接</a>检查自己的知识缺口。需要重建环境时返回 <a href=\"01-setup.html\">01 环境准备</a>；需要理解记忆职责时返回 <a href=\"08-memory.html\">08 Memory</a>。</p>"}
+  ],
+  "sources": [
+    {"title": "LangChain 官方：v1 迁移指南", "url": "https://docs.langchain.com/oss/python/migrate/langchain-v1"},
+    {"title": "LangChain 官方：流式输出与 1.3 event streaming 提示", "url": "https://docs.langchain.com/oss/python/langchain/streaming"},
+    {"title": "pip 官方：pip check 的检查范围", "url": "https://pip.pypa.io/en/stable/cli/pip_check/"}
+  ]
+}

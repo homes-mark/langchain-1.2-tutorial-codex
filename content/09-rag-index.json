@@ -1,0 +1,23 @@
+{
+  "slug": "09-rag-index",
+  "title": "09 · RAG 索引：把文档变成可检索的证据",
+  "chapter": "检索与记忆",
+  "level": "进阶",
+  "minutes": 50,
+  "summary": "理解 Document、切分、Embedding、向量库与 Retriever，用离线可验证的小知识库建立检索基线。",
+  "goals": ["区分索引阶段与提问阶段", "保留来源、版本、租户和片段编号", "运行检索断言并识别关键词向量的局限"],
+  "prerequisites": ["完成 04 LCEL 与 08 Memory", "了解向量由一组数值组成", "能阅读列表推导式与 Python 类"],
+  "sections": [
+    {"id": "pipeline", "title": "1. RAG 不是把全部文档拼进提示词", "body": "<p>假设企业有三万份制度文档，而用户只问“年假有多少天”。我们需要先找出相关且有权限阅读的少量片段，再交给生成步骤。这个过程使知识更新不必等待模型重新训练，也使回答能够带来源。RAG 包括检索与生成两部分，向量数据库只是其中一种检索手段。</p><p>本章完成<strong>索引路径</strong>：文档 → 带元数据的 Document → 片段 → 向量 → 索引；提问时则走<strong>查询路径</strong>：问题 → 查询向量 → 相似度排序 → 候选 Document。下一章才将证据放入提示模板生成回答。现有 SQL、全文检索或业务 API 也可以提供证据，并非所有项目都必须新建向量库。</p><table><thead><tr><th>组件</th><th>输入 → 输出</th><th>关键责任</th></tr></thead><tbody><tr><td>Document</td><td>文本 + metadata</td><td>保留来源与权限信息</td></tr><tr><td>Splitter</td><td>长文档 → 多个片段</td><td>控制片段长度与边界</td></tr><tr><td>Embedding</td><td>文本 → 数值向量</td><td>建立检索表示</td></tr><tr><td>Vector store</td><td>向量 + 文档 → 候选集</td><td>存储、筛选与相似度搜索</td></tr><tr><td>Retriever</td><td>问题 → Document 列表</td><td>为链提供统一检索接口</td></tr></tbody></table>"},
+    {"id": "corpus", "title": "2. 微型语料与离线向量：先学接口", "body": "<p>示例包含 acme 的年假、报销制度，以及 beta 的另一份年假制度。相似主题跨租户存在，能主动暴露权限过滤错误。身份由应用传入，不从用户问题中提取。我们先筛选授权文档再建立租户索引，这使未授权文本不会进入本次生成上下文。</p><p><code>KeywordEmbeddings</code> 为六个固定词统计次数。这是教学用确定性向量，能解释余弦相似度与接口连接，<strong>不是训练得到的语义嵌入</strong>：“休假”不会自动匹配“年假”，新词可能得到全零向量。示例对全零查询直接返回空结果，避免把任意文档误当成命中。</p><example path=\"examples/rag_support.py\"></example><p>运行依赖包括 <code>langchain-core==1.2.5</code>、<code>langchain-text-splitters==1.1.0</code> 和锁定环境中的 NumPy；使用根目录的 <a href=\"requirements.lock.txt\">依赖锁文件</a> 一次安装。<code>InMemoryVectorStore</code> 的相似度运算需要 NumPy，仅安装 LangChain 主包可能遗漏这个运行时依赖。</p>"},
+    {"id": "chunking", "title": "3. 切分决定证据是否完整", "body": "<p>本例以 90 个字符为上限，并设置 15 字符的目标重叠。字符数不是 token 数，生产端要按实际模型的 tokenizer 和上下文预算另行计算。优先沿段落与中文句号分割，可以减少把条件和结论切开的概率；表格、代码、标题层级适合使用理解对应格式的切分策略。</p><p>重叠用于减少边界丢失，但不保证每一对相邻片段都恰好重叠指定长度。过短片段可能丢失适用条件，过长片段会引入无关内容。不要把 90/15 当成最佳参数：为一组真实问答比较不同切分配置的命中情况，再选择。<a href=\"https://docs.langchain.com/oss/python/integrations/splitters/recursive_text_splitter\">官方递归切分说明</a>介绍了这些参数及中文分隔符设置。</p><p>metadata 至少包含稳定 doc_id、source、version 与租户或访问标签。本例 chunk_id 在每次微型索引构建中生成，只适合演示；可增量更新的生产索引应使用文档版本加稳定片段标识，删除旧版本后再发布新版本，防止相互冲突的制度同时被检索。</p>"},
+    {"id": "run", "title": "4. 可运行：先验证检索，再连接模型", "body": "<p>从教程根目录运行 <code>python examples/09_rag_index.py</code>。</p><example path=\"examples/09_rag_index.py\"></example><p>预期输出 <code>已建立 acme 索引：2 个片段</code>、<code>命中文档：leave-v1</code> 以及 <code>PASS</code>。<code>as_retriever(...).invoke(question)</code> 展示 Retriever 接口；共享函数则显式读取相似度分数并过滤低于 0.5 的候选。这两个路径用途不同：前者演示最邻近检索，后者加入本教程的拒答门槛。</p><p>0.5 只是这个关键词向量空间中的教学阈值。不同 embedding、向量库和距离类型的分数不可直接比较。换模型或索引参数后必须重新标定阈值。top-k 总能返回“相对最近”的候选，也可能没有一条真正相关；因此不能把返回非空等同于问题可回答。</p>"},
+    {"id": "exercises", "title": "5. 三档练习与验收", "body": "<ol><li><strong>入门：</strong>查询“住宿报销”。验收：第一条是 <code>expense-v1</code>，内容含 500 元与发票要求；查询“火星天气”返回空列表。</li><li><strong>进阶：</strong>将年假制度扩展为 200 字以上，同时加入不适用于试用期员工的条款。比较 60、90、150 字符的切分。验收：片段保留 metadata，字符长度受控，并人工检查检索结果是否同时包含天数与适用条件。</li><li><strong>高级：</strong>建立至少 12 条检索标注：正常问题、同义问法、跨租户请求、无答案问题各三条。记录 Recall@k（标注相关片段被召回的比例）、跨租户泄漏数、无答案误命中数。验收：跨租户泄漏为 0；记录“休假”失败，解释它暴露的关键词向量局限，而不是修改问题来美化成绩。</li></ol>"},
+    {"id": "production", "title": "6. 换成真实语义检索时保留什么", "body": "<p>真实 embedding 模型通过训练学习文本表示，通常比本章词频向量更能处理同义表达。迁移时先确定模型、维度、批量大小和调用预算；文档与问题必须使用同一兼容空间。切换 embedding 模型通常需要全量重建索引，不能把新旧向量直接混放。</p><p>生产检索可组合关键词与向量结果，再做重排。权限条件必须由服务端生成，并在返回模型前再次验证；只在前端隐藏引用不够。索引构建通常是独立任务，需要幂等写入、失败恢复、删除传播和版本回滚。本示例每次调用重建两份文档的内存索引，只适合学习；真实服务应加载或复用已发布索引。</p><p>不要急于增加向量数据库品牌和多级缓存。先保留可解释的检索测试集，用失败类型决定下一步。完成本章后进入 <a href=\"10-rag-answer.html\">10 · 检索后生成、引用与拒答</a>。</p>"}
+  ],
+  "sources": [
+    {"title": "LangChain 官方：递归文本切分", "url": "https://docs.langchain.com/oss/python/integrations/splitters/recursive_text_splitter"},
+    {"title": "LangChain 官方：Retrieval 架构概念（当前文档路径）", "url": "https://docs.langchain.com/oss/python/deepagents/retrieval"},
+    {"title": "LangChain Core 1.2.5 发布页：版本边界", "url": "https://pypi.org/project/langchain-core/1.2.5/"}
+  ]
+}

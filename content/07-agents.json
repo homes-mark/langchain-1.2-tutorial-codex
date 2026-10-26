@@ -1,0 +1,63 @@
+{
+  "slug": "07-agents",
+  "title": "07 · Agent：让工具调用形成循环",
+  "chapter": "基础篇",
+  "level": "进阶",
+  "minutes": 45,
+  "summary": "把手动执行的工具闭环交给 create_agent，并学会观察它实际走过的路径。",
+  "goals": [
+    "理解 Agent 与固定 Chain 的决策边界",
+    "创建并检查工具调用循环",
+    "用步骤流观察 model → tools → model"
+  ],
+  "prerequisites": [
+    "04 LCEL 链",
+    "06 工具调用与 ToolMessage"
+  ],
+  "sections": [
+    {
+      "id": "concept",
+      "title": "Agent 的新能力与新责任",
+      "body": "<p>固定链由开发者预先确定步骤：模板 → 模型 → 解析器。Agent 在每次模型回复后检查工具请求：如果有，就执行工具并把结果加入消息，再调用模型；如果没有，通常返回最终答案。循环扩大了处理复杂任务的能力，也引入了循环次数、工具权限和结果可信度的新问题。</p><p>在 1.2 主路径中，使用 <code>from langchain.agents import create_agent</code>。它构建在 LangGraph 之上，提供消息状态、工具执行和中间件集成。你无需先掌握底层图 API；当任务需要固定分支、复杂并行或显式状态机时，再考虑直接编排 LangGraph。</p><p>“Agent 会思考”不是一个足够精确的工程描述。你能观察和验证的是它发出的消息、工具名、参数、工具结果、最终回答与外部副作用。不要依赖不可观测的内部推理作为审计证据。</p><table><thead><tr><th>需求</th><th>合适起点</th><th>理由</th></tr></thead><tbody><tr><td>把文本提取成固定字段</td><td>模板 + 结构化模型/解析器</td><td>不需要动态选步骤</td></tr><tr><td>先检索再回答</td><td>固定 RAG 链</td><td>每次流程相同</td></tr><tr><td>按故障情况选择查询工具</td><td>Agent</td><td>下一步取决于前一步观察</td></tr></tbody></table>"
+    },
+    {
+      "id": "example",
+      "title": "完整的单工具 Agent",
+      "body": "<example path=\"examples/07_agents.py\"></example><pre><code class=\"language-bash\">python examples/07_agents.py\n# 可选，完成01的真实模型配置后：\npython examples/07_agents.py --live</code></pre><p>离线模型预先安排了一次 <code>service_status</code> 工具请求，随后返回中文结果。真实工具函数会执行，真实图会把工具结果放回状态；固定脚本不会读取自然语言后自行推断参数。在线分支使用同一工具与提示词，由模型自行选择工具。</p><p><strong>预期验证：</strong>消息类型依次为 <code>human, ai, tool, ai</code>，工具结果为 <code>operational</code>，最后出现 PASS。第一次 ai 的正文可以为空，因为有效内容在 <code>tool_calls</code> 中。不要把空正文当作模型失败。</p>"
+    },
+    {
+      "id": "read-state",
+      "title": "读懂结果和边界",
+      "body": "<p><code>agent.invoke()</code> 返回状态字典，常见入口是 <code>result[\"messages\"]</code>，不是裸字符串。为了显示给用户，可以读取最后一条消息；为了测试与审计，则要检查中间工具请求及其结果。配置结构化输出时还会有 <code>structured_response</code>，见 05。</p><p>工具应接收可验证的参数，返回短小、稳定的业务数据。服务列表、权限判断和错误分类在代码层处理；系统提示词负责告诉模型如何使用这些能力。即使提示词说“只能查自己的工单”，执行层仍必须检查真实身份。</p><p><code>recursion_limit</code> 限制图的执行步数，不等同于“最多调用这么多次模型”。它可以阻止无限循环，但精确的模型调用预算应使用 12 的 <code>ModelCallLimitMiddleware</code>。超限应向用户报告未完成任务，不能把一条截断回答当作成功。</p>"
+    },
+    {
+      "id": "stream",
+      "title": "观察步骤，而不猜测内部状态",
+      "body": "<p>示例还使用 <code>stream_mode=\"updates\"</code> 收集节点状态更新。这个简单图会出现 <code>model → tools → model</code>，对应发起请求、执行工具、形成回答。中间件可能增加其他节点，因此不要把这三个名字当成所有 Agent 的固定轨迹。</p><p>1.2 的常见流式模式包括 <code>updates</code>（步骤更新）、<code>messages</code>（消息分块及元数据）和 <code>custom</code>（自定义进度）。固定脚本模型没有真正的 token 生成过程，本例用步骤流来验证可观察性。真实 token 流还取决于提供商和模型支持。</p><div class=\"warning\">当前文档展示的 <code>stream_events(..., version=\"v3\")</code> 是后续版本的接口，不能直接复制到本教程环境。学习旧版本时，文档中的“推荐”不一定适用于锁定版本。</div>"
+    },
+    {
+      "id": "mistakes",
+      "title": "最容易踩的三个坑",
+      "body": "<ul><li><strong>重复绑定工具：</strong>本教程把原始模型和 <code>tools</code> 交给 <code>create_agent</code>。不要把手动 <code>bind_tools</code> 的模型当成所有配置都通用的输入，尤其结构化输出会参与绑定。</li><li><strong>工具返回大段无关数据：</strong>会增加上下文成本，还可能淹没有效证据。限定字段、数量和长度，把完整日志留在受控存储中。</li><li><strong>把工具的成功执行等同任务成功：</strong>工具可能查错对象，模型也可能曲解结果。验收必须同时覆盖参数、返回值与最终结论。</li></ul>"
+    },
+    {
+      "id": "exercises",
+      "title": "从闭环到可控决策",
+      "body": "<ol><li><strong>基础：</strong>打印每条消息的类型与工具调用 ID。验收：ToolMessage 与 AI 工具请求的 ID 对应。</li><li><strong>进阶：</strong>增加只读服务 <code>mail</code>，修改脚本 fixture 对应参数，再运行在线分支对比。验收：离线证明新路径执行正确；在线另测模型是否正确选择。</li><li><strong>挑战：</strong>让脚本连续发起多个查询，设置较小预算。验收：任务被明确限制；不能把图步数解释成模型调用数，详细实现见 12。</li></ol><p>下一章加入会话状态，让后续问题能够引用前文，同时保证不同会话之间不串话。</p>"
+    }
+  ],
+  "sources": [
+    {
+      "title": "LangChain Agents",
+      "url": "https://docs.langchain.com/oss/python/langchain/agents"
+    },
+    {
+      "title": "Streaming（当前文档，请注意版本）",
+      "url": "https://docs.langchain.com/oss/python/langchain/streaming"
+    },
+    {
+      "title": "create_agent 固定版本源码",
+      "url": "https://github.com/langchain-ai/langchain/blob/langchain%3D%3D1.2.0/libs/langchain_v1/langchain/agents/factory.py"
+    }
+  ]
+}

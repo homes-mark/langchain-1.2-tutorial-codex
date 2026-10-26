@@ -1,0 +1,23 @@
+{
+  "slug": "02-messages",
+  "title": "02 · 模型与消息：认识一次调用",
+  "chapter": "基础篇",
+  "level": "入门",
+  "minutes": 35,
+  "summary": "从消息角色、输入输出类型和一次模型调用开始，建立后续模板、链、工具与记忆共同使用的数据模型。",
+  "goals": ["区分模型、模型集成与消息对象", "读懂 HumanMessage、AIMessage 与 ToolMessage", "运行离线调用并解释为什么模型不会自动记住上一轮"],
+  "prerequisites": ["完成 01 环境准备", "理解 Python 列表、字典、函数和 import"],
+  "sections": [
+    {"id": "concept", "title": "先理解模型边界", "body": "<p>把企业 IT 助手看成一个普通程序：程序接收用户问题，组织上下文，调用模型，再把结果交给页面或后续业务。LangChain 的职责是统一这些组件的接口。模型仍然来自某个提供商或本地推理服务；安装 LangChain 不会自动下载一个大模型，也不会让模型知道你的公司制度。</p><p>本教程锁定 Python 包 <code>langchain==1.2.0</code>，基础类型位于 <code>langchain_core</code>，提供商适配位于各自的集成包。这里使用 <code>FakeListChatModel</code> 离线验证接口，再通过同一调用位置切换在线模型。固定回答只是测试数据，不能据此判断模型是否理解了问题。</p><p>一次调用的最小边界是：<strong>消息列表 → 聊天模型 → AIMessage</strong>。先掌握这个边界，再学习提示模板如何生成消息、链如何连接组件、Agent 如何把工具结果补回消息列表。</p>"},
+    {"id": "roles", "title": "四种消息角色", "body": "<table><thead><tr><th>类型</th><th>表达什么</th><th>本项目中的例子</th></tr></thead><tbody><tr><td>SystemMessage</td><td>应用设置的行为约束和任务背景</td><td>你是 IT 助手，只根据授权资料回答</td></tr><tr><td>HumanMessage</td><td>用户本轮提供的输入</td><td>我无法登录财务系统</td></tr><tr><td>AIMessage</td><td>模型回复，也可能包含工具调用请求</td><td>请补充错误码，或请求查询工单</td></tr><tr><td>ToolMessage</td><td>一次工具执行的结果</td><td>工单 T-100 当前状态为处理中</td></tr></tbody></table><p>消息不是简单的带标签字符串。除 <code>content</code> 外，消息还可能携带 ID、用量信息、工具调用及其他元数据。不要为了方便记录日志就把整个对象强行转成字符串，否则后续很难可靠地读取结构化字段。</p><p><code>AIMessage.content</code> 在纯文本示例中是字符串，在多模态或某些提供商接口中也可能是内容块列表。这里的断言只针对本章固定的纯文本测试数据。业务代码需要按所用模型支持的内容结构处理图片、文本和其他块，不能无条件拼接成普通字符串。</p>"},
+    {"id": "example", "title": "运行：一次调用与流式合并", "body": "<p>在教程根目录、已安装锁文件依赖的环境中执行 <code>python examples/02_messages.py</code>。以下是完整文件，默认不联网，不需要密钥。</p><example path=\"examples/02_messages.py\"></example><p>你会看到消息角色 <code>['system', 'human']</code>、固定回复“先完成身份验证。”、下一轮消息数 <code>4</code>，以及流式合并结果“身份验证”。这些检查验证的是消息类型、历史组织和流式片段拼接；不会验证在线模型的回答质量。</p><p>代码没有把第二轮历史真正发给模型，只构造并检查了四条消息。这样能清楚看出“保存历史”是应用的责任。流式输出中的片段是一段响应的分块，不代表模型已经完成了整个答案。</p>"},
+    {"id": "online", "title": "接上真实模型", "body": "<p>按环境页设置 <code>OPENAI_API_KEY</code> 和 <code>OPENAI_MODEL</code> 后，执行 <code>python examples/02_messages.py --live</code>。模型名由你有权限使用的服务决定；教程不把某个模型名称和服务可用性写死。在线运行会联网并可能计费，离线浏览 HTML 与离线运行固定示例不受影响。</p><p>在线分支仍然返回 <code>AIMessage</code>，但具体措辞可能变化，所以代码只断言类型，不把某一句话当作标准答案。第一次调试可以记录请求耗时、模型名与成功状态；不要直接打印密钥或未经脱敏的员工问题。提供商返回用量信息时再读取 <code>usage_metadata</code>，不要假设每次响应都包含它。</p>"},
+    {"id": "practice", "title": "练习：从查看数据到验证历史", "body": "<ol><li><strong>入门：</strong>修改用户问题，并在调用前打印 <code>messages[-1].content</code>。验证打印的文本等于新问题，而离线模型回答仍保持不变。解释为什么这说明固定模型不能验证语义能力。</li><li><strong>进阶：</strong>真正调用 <code>model.invoke(history)</code>，检查返回类型仍为 <code>AIMessage</code>。用一个变量分别保存第一轮和第二轮结果，确认你没有把消息对象覆盖成字符串。</li><li><strong>挑战：</strong>把两个不同用户的消息分别放入两份列表，添加一轮历史后检查另一份列表长度不变。验收条件：会话 A 的内容没有出现在会话 B 的输入中。后续记忆章节会把这种隔离落实到线程 ID 和存储。</li></ol><details><summary>参考检查思路</summary><p>新建列表时使用独立列表或 <code>[*messages, response]</code>；不要让两个用户变量指向同一个可变列表。离线模型只能验证“历史是否被传入”，真实模型是否利用历史还需要在线集成测试。</p></details>"},
+    {"id": "pitfalls", "title": "常见误区与最佳实践", "body": "<ul><li><strong>误区：模型对象等于聊天会话。</strong>重复调用同一个模型实例通常不会自动附带历史。明确构造历史，或在后续 Agent 中使用 checkpointer。</li><li><strong>误区：system 提示能替代权限控制。</strong>提示帮助模型遵循行为要求，但读取数据库、操作工单的权限必须由服务端代码检查。</li><li><strong>实践：区分接口测试与质量评估。</strong>固定模型适合快速回归；真实模型需要小规模、可审查的样本集。不要把固定测试通过写成模型准确率。</li><li><strong>实践：先控制调用次数。</strong>流式提升用户感知，不会自动减少 token。调试时显式设置超时、重试上限，避免一次失败带来重复费用。</li></ul>"},
+    {"id": "next", "title": "学完这一页后", "body": "<p>你应能说清一次调用的输入和输出，并指出聊天历史存在于哪里。推荐下一步学习 <a href=\"03-prompts.html\">03 提示模板</a>，把手工创建消息变成可复用、可检查的输入过程；完成后再进入 <a href=\"04-chains.html\">04 链与 LCEL</a>。</p>"}
+  ],
+  "sources": [
+    {"title": "LangChain 官方：Messages", "url": "https://docs.langchain.com/oss/python/langchain/messages"},
+    {"title": "langchain-core 1.2.5：消息与模型源码", "url": "https://github.com/langchain-ai/langchain/tree/langchain-core%3D%3D1.2.5/libs/core/langchain_core"}
+  ]
+}

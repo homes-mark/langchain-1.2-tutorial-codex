@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "html_pages": 22,
+  "content_pages": 22,
+  "local_references_checked": 1269,
+  "python_files_parsed": 28,
+  "failures": [],
+  "limitations": [
+    "Static HTML checks do not replace browser interaction tests.",
+    "External reference URLs and live model providers are not exercised."
+  ]
+}

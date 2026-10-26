@@ -1,0 +1,59 @@
+{
+  "slug": "17-project-3",
+  "title": "实战 3 · 会话记忆与隔离",
+  "chapter": "递进实战",
+  "level": "进阶",
+  "minutes": 50,
+  "summary": "让助手支持连续追问，同时验证会话隔离；区分状态保留与模型真正理解历史。",
+  "goals": [
+    "使用 checkpointer 和 thread_id 保留短期状态",
+    "解释会话、用户和租户之间的关系",
+    "用状态快照验证记忆而非只看答案"
+  ],
+  "prerequisites": [
+    "实战 2 已完成",
+    "第 8 章 Memory 与持久化概念"
+  ],
+  "sections": [
+    {
+      "id": "delta",
+      "title": "追问为什么需要记忆",
+      "body": "\n<p>员工先查询 IT-1001 和 VPN 状态，然后问：“刚才查询的工单号是什么？”第二条消息没有出现编号，单次无状态模型无法从这句话恢复第一轮事实。我们需要让运行时在新输入到达时，取出同一会话的历史消息，再把这次输入追加进去。</p>\n<p>本阶段只新增 <code>InMemorySaver</code> 作为 checkpointer 和服务端生成的 thread_id。工具集合与阶段二完全相同。模型上下文里的历史是短期会话状态；它与跨会话偏好存储、企业知识库是不同用途的数据，不应放进同一个无边界的列表。</p>\n<p>InMemorySaver 保存在当前 Python 进程中。关闭脚本，记忆就消失。把变量名写成 memory、把 thread_id 保存到浏览器，都不会让进程内状态自动持久化。</p>"
+    },
+    {
+      "id": "identity",
+      "title": "谁有权访问哪个 thread",
+      "body": "\n<example path=\"project/helpdesk.py\" region=\"conversation\"></example>\n<p>本例将租户、用户和本地会话名组合成 thread_id。这样便于观察不同作用域，并非完整授权方案。真正的 Web 服务必须先验证请求登录身份，再检查会话属于当前用户，最后才把查询映射到受控 thread_id。前端传来“我是 Alice”或另一个 thread_id 都不能作为访问依据。</p>\n<p>同一用户可以有多个 thread：例如一个会话处理 VPN，另一个会话处理邮箱。跨线程需要共享的偏好应进入带 user/tenant namespace 的 Store；不要为了“记住用户”而把所有会话强行写入同一个 thread。那会把任务上下文混在一起，也让删除单个会话变得困难。</p>"
+    },
+    {
+      "id": "implementation",
+      "title": "每一轮只提交本轮新消息",
+      "body": "\n<p>共享构造器在 stage 大于等于 3 时传入 InMemorySaver。run_stage 第一次调用使用 QUESTIONS[3]；第二次使用相同 config，仅提交“刚才查询的工单号是什么？”这条 HumanMessage。checkpointer 与消息 reducer 共同维护历史，无需调用方手动把上一轮完整数组再发送一遍。</p>\n<example path=\"project/stage3.py\"></example>\n<pre><code class=\"language-bash\">python project/stage3.py</code></pre>\n<p>默认输出为“同一 thread 保留历史：8 条消息”，最终回答含 IT-1001。8 条分别是首轮用户、首次工具调用、工单回执、第二次工具调用、服务回执、首轮最终回答、第二轮用户和第二轮最终回答。在线模型的调用轮次可能变化，消息数量不应被固定为线上指标。</p>\n<p>真正验证记忆的是代码里的两项断言：第二轮结果仍包含第一轮 HumanMessage；另一个 session 的 get_state 为空。脚本模型的最终回答是预写的，即使没有历史也可能答对，所以我们不把那句话当作记忆能力证据。</p>"
+    },
+    {
+      "id": "capacity",
+      "title": "记忆增长后的上下文预算",
+      "body": "\n<p>保存所有消息并不等于每轮都应该发送所有消息。会话越长，token 成本、延迟和隐私暴露面越大。可以在发送模型前保留最近若干轮，并对更早内容做摘要；摘要必须保留工单号、用户已确认的约束和关键工具回执，避免“很简洁但丢了任务”。</p>\n<p>裁剪时不能仅按数组长度粗暴切割。一个 AIMessage 可能包含多个 tool_calls，后面各自应有对应 ToolMessage；截断其中一半会破坏协议。既要在测试中检查消息对齐，也要在长会话场景评估摘要是否引入错误。参见 <a href=\"08-memory.html\">第 8 章的 Memory 分层</a>。</p>"
+    },
+    {
+      "id": "exercises",
+      "title": "练习：看见状态，验证隔离",
+      "body": "\n<ol><li><strong>入门：</strong>解释默认 8 条消息的来源，并找到第二轮调用的新增输入。验证：第二轮没有把第一轮消息数组手动重复传入。</li>\n<li><strong>进阶：</strong>将第二轮 session 改为 different-session，先检查 get_state。验证：状态为空；不要用脚本模型仍然说出的 IT-1001 判断隔离是否失败。</li>\n<li><strong>高级：</strong>设计同租户不同用户、同用户不同会话、不同租户同名用户三组用例。验证：thread_id 和读取授权均隔离；再写一条恢复旧 thread 的测试，确认合法用户能取到自己的消息。</li></ol>"
+    },
+    {
+      "id": "production",
+      "title": "从进程内演示走向持久服务",
+      "body": "\n<p>生产中需要持久 checkpointer、受控的会话归属映射、保留期限与删除接口。更换为持久数据库时，还应验证进程重启后恢复、并发访问同一 thread、数据库不可用时的行为；单纯替换导入语句无法完成这些要求。checkpointer 的持久化也不自动提供法律或业务要求的审计。</p>\n<p>本项目仍使用临时数据库，退出不保留业务写入，这一点会延续到第五阶段。完成状态隔离验证后继续 <a href=\"18-project-4.html\">实战 4：带权限的检索增强</a>：记忆保存“刚才说了什么”，知识检索解决“企业规定怎么做”。</p>"
+    }
+  ],
+  "sources": [
+    {
+      "title": "LangChain 短期记忆",
+      "url": "https://docs.langchain.com/oss/python/langchain/short-term-memory"
+    },
+    {
+      "title": "LangGraph 持久化与线程",
+      "url": "https://docs.langchain.com/oss/python/langgraph/persistence"
+    }
+  ]
+}

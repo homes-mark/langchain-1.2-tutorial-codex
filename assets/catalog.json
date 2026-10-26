@@ -1,0 +1,156 @@
+[
+  {
+    "slug": "index",
+    "title": "从第一条链，到企业智能体",
+    "chapter": "学习路线",
+    "level": "入门",
+    "minutes": 20
+  },
+  {
+    "slug": "01-setup",
+    "title": "01 · 环境、版本与第一次运行",
+    "chapter": "基础篇",
+    "level": "入门",
+    "minutes": 35
+  },
+  {
+    "slug": "02-messages",
+    "title": "02 · 模型与消息：认识一次调用",
+    "chapter": "基础篇",
+    "level": "入门",
+    "minutes": 35
+  },
+  {
+    "slug": "03-prompts",
+    "title": "03 · 提示模板：把输入变成稳定契约",
+    "chapter": "基础篇",
+    "level": "入门",
+    "minutes": 40
+  },
+  {
+    "slug": "04-chains",
+    "title": "04 · Chain 与 LCEL：连接可预测的流程",
+    "chapter": "基础篇",
+    "level": "入门",
+    "minutes": 45
+  },
+  {
+    "slug": "05-structured",
+    "title": "05 · 结构化输出：让答案进入程序",
+    "chapter": "基础篇",
+    "level": "进阶",
+    "minutes": 45
+  },
+  {
+    "slug": "06-tools",
+    "title": "06 · 工具调用：请求、执行与结果回传",
+    "chapter": "基础篇",
+    "level": "进阶",
+    "minutes": 50
+  },
+  {
+    "slug": "07-agents",
+    "title": "07 · Agent：让工具调用形成循环",
+    "chapter": "基础篇",
+    "level": "进阶",
+    "minutes": 45
+  },
+  {
+    "slug": "08-memory",
+    "title": "08 · Memory：让会话连续，也让边界清楚",
+    "chapter": "检索与记忆",
+    "level": "进阶",
+    "minutes": 45
+  },
+  {
+    "slug": "09-rag-index",
+    "title": "09 · RAG 索引：把文档变成可检索的证据",
+    "chapter": "检索与记忆",
+    "level": "进阶",
+    "minutes": 50
+  },
+  {
+    "slug": "10-rag-answer",
+    "title": "10 · RAG 回答：证据、引用与有边界的拒答",
+    "chapter": "检索与记忆",
+    "level": "进阶",
+    "minutes": 50
+  },
+  {
+    "slug": "11-agentic-rag",
+    "title": "11 · Agentic RAG：把检索交给工具，把权限留给应用",
+    "chapter": "检索与记忆",
+    "level": "高级",
+    "minutes": 50
+  },
+  {
+    "slug": "12-runtime",
+    "title": "12 · 中间件、流式输出与运行预算",
+    "chapter": "工程化",
+    "level": "高级",
+    "minutes": 45
+  },
+  {
+    "slug": "13-testing",
+    "title": "13 · 测试、评估与可观察性",
+    "chapter": "工程化",
+    "level": "高级",
+    "minutes": 45
+  },
+  {
+    "slug": "14-production",
+    "title": "14 · 安全、性能与部署边界",
+    "chapter": "工程化",
+    "level": "高级",
+    "minutes": 50
+  },
+  {
+    "slug": "15-project-1",
+    "title": "实战 1 · 单工具企业服务台",
+    "chapter": "递进实战",
+    "level": "进阶",
+    "minutes": 45
+  },
+  {
+    "slug": "16-project-2",
+    "title": "实战 2 · 多工具与任务边界",
+    "chapter": "递进实战",
+    "level": "进阶",
+    "minutes": 45
+  },
+  {
+    "slug": "17-project-3",
+    "title": "实战 3 · 会话记忆与隔离",
+    "chapter": "递进实战",
+    "level": "进阶",
+    "minutes": 50
+  },
+  {
+    "slug": "18-project-4",
+    "title": "实战 4 · 企业知识与权限 RAG",
+    "chapter": "递进实战",
+    "level": "高级",
+    "minutes": 60
+  },
+  {
+    "slug": "19-project-5",
+    "title": "实战 5 · 审批、幂等与审计",
+    "chapter": "递进实战",
+    "level": "高级",
+    "minutes": 75
+  },
+  {
+    "slug": "20-migration",
+    "title": "20 · 迁移与排错：读懂新旧代码的边界",
+    "chapter": "附录与交接",
+    "level": "进阶",
+    "minutes": 40
+  },
+  {
+    "slug": "21-reference",
+    "title": "21 · 参考手册：术语、目录与交接",
+    "chapter": "附录与交接",
+    "level": "入门",
+    "minutes": 30
+  }
+]

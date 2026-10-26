@@ -1,0 +1,211 @@
+{
+  "generated_at_utc": "2026-10-26T15:57:54.396644+00:00",
+  "interpreter": "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+  "mode": "offline deterministic regression",
+  "status": "passed",
+  "executed_count": 15,
+  "passed_count": 15,
+  "failed": [],
+  "results": [
+    {
+      "script": "examples/01_check_environment.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/01_check_environment.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "langchain==1.2.0\nlangchain-core==1.2.5\nlanggraph==1.0.5\nlanggraph-prebuilt==1.0.5\nlangchain-openai==1.1.6\nlangchain-text-splitters==1.1.0\nPASS: imports + a real agent graph invocation\n",
+      "stderr": "",
+      "seconds": 0.844,
+      "passed": true
+    },
+    {
+      "script": "examples/02_messages.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/02_messages.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "消息角色： ['system', 'human']\n模型回复： 先完成身份验证。\n下一轮消息数： 4\n流式合并： 身份验证\n",
+      "stderr": "",
+      "seconds": 0.734,
+      "passed": true
+    },
+    {
+      "script": "examples/03_prompts.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/03_prompts.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "文本模板： 为财务部解释双因素认证；输出示例格式：{\"title\": \"标题\"}\n聊天角色： ['system', 'human', 'ai', 'human']\n当前问题： 用户问题：配置里出现 {unknown_key} 应怎么办？\n缺失 question：已正确拒绝\n",
+      "stderr": "",
+      "seconds": 0.766,
+      "passed": true
+    },
+    {
+      "script": "examples/04_chains.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/04_chains.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "单条： 请通过服务台完成身份验证。\n批量结果数： 2\n保留问题： {'answer': '请通过服务台完成身份验证。', 'question': '如何重置密码？'}\n异步： 请通过服务台完成身份验证。\n",
+      "stderr": "",
+      "seconds": 0.797,
+      "passed": true
+    },
+    {
+      "script": "examples/05_structured.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/05_structured.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "{\"title\":\"财务系统登录失败\",\"priority\":\"high\",\"affected_users\":12}\n非法枚举与人数：已正确拒绝\n",
+      "stderr": "",
+      "seconds": 0.766,
+      "passed": true
+    },
+    {
+      "script": "examples/06_tools.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/06_tools.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "工具结果： {\"total_cents\": 5970, \"currency\": \"CNY\"}\n最终回复： 总价 5970 分，即 59.70 元；尚未下单。\n负数数量：已正确拒绝\n",
+      "stderr": "",
+      "seconds": 0.781,
+      "passed": true
+    },
+    {
+      "script": "examples/07_agents.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/07_agents.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "human 请查询 VPN 服务是否正常。 \nai  [{'name': 'service_status', 'args': {'service': 'vpn'}, 'id': 'status-1', 'type': 'tool_call'}]\ntool operational \nai VPN 服务运行正常（operational）。 []\nPASS: tool loop and stream updates = model -> tools -> model\n",
+      "stderr": "",
+      "seconds": 0.844,
+      "passed": true
+    },
+    {
+      "script": "examples/08_memory.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/08_memory.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "你叫小林。\n同一会话消息数：4；新会话消息数：2\n跨会话偏好可读；另一租户命名空间没有该记录：PASS\n注意：模型回复预设；断言验证状态持久化与隔离，不证明模型记忆推理能力。\n",
+      "stderr": "",
+      "seconds": 0.828,
+      "passed": true
+    },
+    {
+      "script": "examples/09_rag_index.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/09_rag_index.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "已建立 acme 索引：2 个片段\n命中文档：leave-v1\n年假制度：正式员工每年享有 10 天年假。年假申请应提前 3 个工作日提交，由直属主管审批。\n长度、无匹配查询与租户边界检查：PASS\n",
+      "stderr": "",
+      "seconds": 0.797,
+      "passed": true
+    },
+    {
+      "script": "examples/10_rag_answer.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/10_rag_answer.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "正式员工每年有 10 天年假。[leave-v1]\n现有授权资料不足，无法回答。\n引用允许列表、无证据拒答：PASS\n引用存在并不等于事实正确；还需检查原文能否支持回答。\n",
+      "stderr": "",
+      "seconds": 0.89,
+      "passed": true
+    },
+    {
+      "script": "examples/11_agentic_rag.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/11_agentic_rag.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "正式员工每年有 10 天年假。[leave-v1]\n检索工具调用次数：1；工具结果与调用 ID 关联：PASS\n模型可见参数仅 query；租户来自可信运行上下文：PASS\n",
+      "stderr": "",
+      "seconds": 0.954,
+      "passed": true
+    },
+    {
+      "script": "examples/12_runtime.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/12_runtime.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "model_calls=2; final=暂时无法确认该服务，请提供有效的服务名称。\nmodel_calls=1; final=Model call limits exceeded: run limit (1/1)\nPASS: recoverable tool failure + enforced model call budget\n",
+      "stderr": "",
+      "seconds": 0.859,
+      "passed": true
+    },
+    {
+      "script": "examples/13_evaluation.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/13_evaluation.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "fixture workflow success=100%; cases=3; model_calls=2/case\nThis does NOT measure live model intent understanding or answer truthfulness.\n",
+      "stderr": "",
+      "seconds": 0.859,
+      "passed": true
+    },
+    {
+      "script": "examples/14_security.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "examples/14_security.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "{\"event\": \"ticket_read\", \"request_hash\": \"2aee7a0dd06287b4\", \"result\": \"allowed\"}\nPASS: tenant/owner isolation + permission + SQL parameterization\n",
+      "stderr": "",
+      "seconds": 0.094,
+      "passed": true
+    },
+    {
+      "script": "project/check_project.py",
+      "command": [
+        "D:\\langchain-works\\langchain-1.2-tutorial\\.venv\\Scripts\\python.exe",
+        "project/check_project.py"
+      ],
+      "returncode": 0,
+      "timed_out": false,
+      "stdout": "工具 get_ticket: {\"ticket_id\": \"IT-1001\", \"status\": \"处理中\"}\n最终回复: IT-1001 处理中。\n数据库：tickets=0, audit=0\n工具 get_ticket: {\"ticket_id\": \"IT-1001\", \"status\": \"处理中\"}\n工具 service_health: {\"service\": \"vpn\", \"status\": \"正常\", \"source\": \"演示状态表\"}\n最终回复: IT-1001 处理中；VPN 服务正常。\n数据库：tickets=0, audit=0\n同一 thread 保留历史: 8 条消息\n工具 get_ticket: {\"ticket_id\": \"IT-1001\", \"status\": \"处理中\"}\n工具 service_health: {\"service\": \"vpn\", \"status\": \"正常\", \"source\": \"演示状态表\"}\n最终回复: 刚才查询的是 IT-1001。\n数据库：tickets=0, audit=0\n工具 get_ticket: {\"ticket_id\": \"IT-1001\", \"status\": \"处理中\"}\n工具 service_health: {\"service\": \"vpn\", \"status\": \"正常\", \"source\": \"演示状态表\"}\n工具 search_knowledge: [{\"source\": \"KB-001\", \"text\": \"VPN 连接失败时先检查网络，再重新登录企业客户端。\"}]\n最终回复: IT-1001 处理中；VPN 服务正常。检查网络后重登客户端 [KB-001]。\n数据库：tickets=0, audit=0\nPENDING：以下动作尚未执行\n{\n  \"action_requests\": [\n    {\n      \"name\": \"create_ticket\",\n      \"args\": {\n        \"title\": \"VPN 连接仍然失败\"\n      },\n      \"description\": \"Tool execution requires approval\\n\\nTool: create_ticket\\nArgs: {'title': 'VPN 连接仍然失败'}\"\n    }\n  ],\n  \"review_configs\": [\n    {\n      \"action_name\": \"create_ticket\",\n      \"allowed_decisions\": [\n        \"approve\",\n        \"reject\"\n      ]\n    }\n  ]\n}\n工具 get_ticket: {\"ticket_id\": \"IT-1001\", \"status\": \"处理中\"}\n工具 service_health: {\"service\": \"vpn\", \"status\": \"正常\", \"source\": \"演示状态表\"}\n工具 search_knowledge: [{\"source\": \"KB-001\", \"text\": \"VPN 连接失败时先检查网络，再重新登录企业客户端。\"}]\n数据库：tickets=0, audit=0\nPENDING：以下动作尚未执行\n{\n  \"action_requests\": [\n    {\n      \"name\": \"create_ticket\",\n      \"args\": {\n        \"title\": \"VPN 连接仍然失败\"\n      },\n      \"description\": \"Tool execution requires approval\\n\\nTool: create_ticket\\nArgs: {'title': 'VPN 连接仍然失败'}\"\n    }\n  ],\n  \"review_configs\": [\n    {\n      \"action_name\": \"create_ticket\",\n      \"allowed_decisions\": [\n        \"approve\",\n        \"reject\"\n      ]\n    }\n  ]\n}\n工具 get_ticket: {\"ticket_id\": \"IT-1001\", \"status\": \"处理中\"}\n工具 service_health: {\"service\": \"vpn\", \"status\": \"正常\", \"source\": \"演示状态表\"}\n工具 search_knowledge: [{\"source\": \"KB-001\", \"text\": \"VPN 连接失败时先检查网络，再重新登录企业客户端。\"}]\n工具 create_ticket: 操作员拒绝建单\n最终回复: 流程已结束。是否建单成功，请以工具回执和数据库行数为准。\n数据库：tickets=0, audit=0\nPENDING：以下动作尚未执行\n{\n  \"action_requests\": [\n    {\n      \"name\": \"create_ticket\",\n      \"args\": {\n        \"title\": \"VPN 连接仍然失败\"\n      },\n      \"description\": \"Tool execution requires approval\\n\\nTool: create_ticket\\nArgs: {'title': 'VPN 连接仍然失败'}\"\n    }\n  ],\n  \"review_configs\": [\n    {\n      \"action_name\": \"create_ticket\",\n      \"allowed_decisions\": [\n        \"approve\",\n        \"reject\"\n      ]\n    }\n  ]\n}\n工具 get_ticket: {\"ticket_id\": \"IT-1001\", \"status\": \"处理中\"}\n工具 service_health: {\"service\": \"vpn\", \"status\": \"正常\", \"source\": \"演示状态表\"}\n工具 search_knowledge: [{\"source\": \"KB-001\", \"text\": \"VPN 连接失败时先检查网络，再重新登录企业客户端。\"}]\n工具 create_ticket: {\"ticket_id\": \"NEW-1\", \"created\": true}\n最终回复: 流程已结束。是否建单成功，请以工具回执和数据库行数为准。\n数据库：tickets=1, audit=1\nPASS：5 阶段、审批、ACL、事务幂等边界通过\n",
+      "stderr": "",
+      "seconds": 1.141,
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "No --live branch or provider network request is executed.",
+    "Scripted models check framework control flow, not language understanding.",
+    "This runner disables tracing and removes common API keys; it is not a network sandbox."
+  ]
+}

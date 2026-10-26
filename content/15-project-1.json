@@ -1,0 +1,59 @@
+{
+  "slug": "15-project-1",
+  "title": "实战 1 · 单工具企业服务台",
+  "chapter": "递进实战",
+  "level": "进阶",
+  "minutes": 45,
+  "summary": "从一个可验证的只读问题开始：查询自己的工单。五阶段共享实现，每一步只增加一种主要能力。",
+  "goals": [
+    "运行真实 create_agent 的模型—工具循环",
+    "把身份校验放在工具执行侧",
+    "建立可重复的验收标准"
+  ],
+  "prerequisites": [
+    "完成第 6、7 章：工具与 Agent",
+    "会使用虚拟环境和运行 Python 文件"
+  ],
+  "sections": [
+    {
+      "id": "scenario",
+      "title": "业务目标与五阶段路线",
+      "body": "\n<p>你在一家企业维护 IT 服务台。员工 Alice 想知道自己的 VPN 工单是否处理完成。第一版只回答工单状态；随后再加入服务健康状态、多轮追问、企业知识和审批建单。贯穿案例的价值在于，每次扩展都能指出新增了哪个状态、哪个信任边界、哪条验收断言。</p>\n<table><thead><tr><th>阶段</th><th>新增能力</th><th>可观察的证据</th></tr></thead><tbody>\n<tr><td>1</td><td>单只读工具</td><td>ToolMessage 返回 IT-1001 的状态</td></tr>\n<tr><td>2</td><td>多工具</td><td>工单和服务健康各有独立回执</td></tr>\n<tr><td>3</td><td>会话记忆</td><td>同一 thread 保留上一轮消息</td></tr>\n<tr><td>4</td><td>权限过滤后的 RAG</td><td>只引用当前用户可读的 KB-001</td></tr>\n<tr><td>5</td><td>审批、幂等、审计</td><td>批准后恰好一条工单、一条审计</td></tr></tbody></table>\n<p>这是企业架构的可运行教学切片。数据表是虚构业务数据，身份由演示程序固定生成，数据库是临时 SQLite；它还不是接入了企业 SSO、真实工单系统和持久队列的上线服务。</p>"
+    },
+    {
+      "id": "boundary",
+      "title": "先划清数据和授权边界",
+      "body": "\n<p>模型只应提供 <code>ticket_id</code>，不能自行指定 <code>tenant_id</code> 或 <code>user_id</code>。后端将认证后的身份作为 <code>RequestContext</code> 传入；工具通过 <code>ToolRuntime</code> 读取。参数不出现在模型可填写的输入里，比在提示词中要求“不要冒充别人”更可靠。</p>\n<example path=\"project/helpdesk.py\" region=\"context\"></example>\n<p>本案例在查询时同时检查租户和工单所有者。无权限与不存在统一返回 <code>NOT_FOUND_OR_FORBIDDEN</code>，避免通过不同错误提示枚举其他人的工单。管理员特例写在执行侧，升级角色应由真实身份系统处理。</p>\n<example path=\"project/helpdesk.py\" region=\"ticket_lookup\"></example>\n<p>这里的 dataclass 只是承载上下文，并不完成认证。将任意请求 JSON 反序列化为这个类再交给 Agent，仍然会产生身份伪造漏洞。</p>"
+    },
+    {
+      "id": "implementation",
+      "title": "运行入口与真实框架调用",
+      "body": "\n<p>五个入口文件调用同一份 <a href=\"project/helpdesk.py\">helpdesk.py 完整源码</a>。阶段一的工具集合仅含 <code>get_ticket</code>；构造器仍使用 LangChain 1.2 的 <code>create_agent</code>，执行过程中会产生标准 AIMessage 和 ToolMessage。</p>\n<example path=\"project/stage1.py\"></example>\n<p>默认的 ScriptedChatModel 按预设顺序发出工具调用和最终文本。这使你能够离线检查参数、执行、回传及结束条件；它没有阅读问题并自行规划的能力。可运行的框架控制流，与真实大模型的理解质量，是两项不同的验收工作。</p>\n<pre><code class=\"language-bash\">python project/stage1.py\npython project/stage1.py --live</code></pre>\n<p>在教程根目录执行，Python 3.12 与精确依赖见 <a href=\"requirements.lock.txt\">requirements.lock.txt</a>。第二条命令需要按环境章节设置 OPENAI_API_KEY、OPENAI_MODEL，并会访问模型服务；本交付仅对默认离线模式执行回归。</p>"
+    },
+    {
+      "id": "acceptance",
+      "title": "如何判断阶段一完成",
+      "body": "\n<p>默认运行应出现工具回执 <code>{\"ticket_id\":\"IT-1001\",\"status\":\"处理中\"}</code>，最终文本包含工单号与状态，数据库行数为 <code>tickets=0, audit=0</code>。单独检查最后一句自然语言是不够的：脚本模型甚至可以说出不存在的事实。应检查执行记录确实出现了 get_ticket，并读取其结构化结果。</p>\n<p>读工具无副作用，适合作为第一条基线。后续重构、升级模型或者添加中间件时，至少保留这条基线，避免功能增加后原本的查询反而失效。不能把来自模型的“已经查询”当作查询发生的证明。</p>"
+    },
+    {
+      "id": "exercises",
+      "title": "练习：成功路径、失败路径、授权路径",
+      "body": "\n<ol><li><strong>入门：</strong>运行阶段一，在输出中标注用户请求、工具回执和最终回复。验证：能解释 status 字段来自 TICKETS，而不是提示模板。</li>\n<li><strong>进阶：</strong>把脚本模型中的 IT-1001 改为一个不存在的编号。验证：工具返回 NOT_FOUND_OR_FORBIDDEN；说明为什么还应同步调整脚本最终文本，或只针对工具结果做断言。</li>\n<li><strong>高级：</strong>用同租户其他用户以及不同租户身份调用 lookup_ticket。验证：两类越权均返回相同错误，不能泄露状态。参考 <a href=\"project/check_project.py\">check_project.py</a> 的边界检查。</li></ol>"
+    },
+    {
+      "id": "pitfalls",
+      "title": "误区与进入下一阶段的条件",
+      "body": "\n<p><strong>误区：</strong>把“提示词已经写了权限规则”当作授权；把模型回答正确一次当作工具可靠；把演示身份当作真正登录。授权必须在工具触达数据时检查，业务结果必须以数据源为准。</p>\n<p><strong>最佳实践：</strong>第一版只暴露最小只读能力，工具名描述业务动作，输入 schema 足够窄，错误码稳定。避免把一个可执行任意 SQL 或任意 URL 的万能工具交给模型。</p>\n<p>完成三个练习后继续 <a href=\"16-project-2.html\">实战 2：多工具协作</a>。新增第二个数据源时，观察的重点从单个工具是否可用，转为两个结果如何组合并保持各自的来源。</p>"
+    }
+  ],
+  "sources": [
+    {
+      "title": "LangChain 1.2.0 create_agent 源码",
+      "url": "https://github.com/langchain-ai/langchain/blob/langchain%3D%3D1.2.0/libs/langchain_v1/langchain/agents/factory.py"
+    },
+    {
+      "title": "LangChain 工具与运行上下文",
+      "url": "https://docs.langchain.com/oss/python/langchain/tools"
+    }
+  ]
+}

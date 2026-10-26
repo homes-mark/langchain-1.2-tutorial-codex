@@ -1,0 +1,63 @@
+{
+  "slug": "12-runtime",
+  "title": "12 · 中间件、流式输出与运行预算",
+  "chapter": "工程化",
+  "level": "高级",
+  "minutes": 45,
+  "summary": "把循环次数、可恢复错误和进度反馈做成明确策略，让失败可解释、资源可控制。",
+  "goals": [
+    "使用 wrap_tool_call 处理预期业务错误",
+    "区分模型调用上限、图步数、超时与并发限制",
+    "为流式与异步调用设计合理的应用边界"
+  ],
+  "prerequisites": [
+    "07 Agent 循环",
+    "Python 异常处理；了解 async/await 更佳"
+  ],
+  "sections": [
+    {
+      "id": "middleware",
+      "title": "把策略放在合适的位置",
+      "body": "<p>一个 Agent 的核心循环很小，但应用政策往往不少：输入规范化、动态提示、工具错误处理、模型调用上限、敏感操作审批。中间件让这些策略在模型与工具调用的边界执行，避免把逻辑全塞进提示词。</p><p>先区分两种情况：业务预期错误，例如未知服务，可以转成模型能处理的工具结果；程序缺陷，例如数据库连接配置错误，通常应该保留异常并触发运维处理。把所有异常都吞掉并返回“成功”会制造难以诊断的假象。错误给模型的内容应是有限的错误类别和可行下一步，而不是栈信息、SQL 或密钥。</p><p><code>wrap_tool_call</code> 接收请求与执行函数。它可在执行前校验，在执行后观察返回值，或捕获指定异常。多个中间件的组合顺序会影响行为，因此把它作为应用契约，用测试确认，不依赖偶然顺序。</p>"
+    },
+    {
+      "id": "code",
+      "title": "错误反馈与硬性调用预算",
+      "body": "<example path=\"examples/12_runtime.py\"></example><pre><code class=\"language-bash\">python examples/12_runtime.py</code></pre><p>第一次用较宽预算运行：工具遇到未知服务，包装器生成 <code>status=\"error\"</code> 的 ToolMessage，模型再形成可解释回答。第二次预算仅允许一次模型调用：图应终止于预算限制，脚本直接检查模型计数，而不是猜测最后一句话的措辞。</p><p><strong>验收：</strong>两次输出中的 <code>model_calls</code> 分别为 2 和 1，并出现 PASS。两次独立创建模型，因为脚本响应会被顺序消费。真实应用不能在并发会话之间共享这种有游标的测试模型。</p>"
+    },
+    {
+      "id": "budgets",
+      "title": "四种限制各自解决什么",
+      "body": "<table><thead><tr><th>控制</th><th>限制对象</th><th>不能替代什么</th></tr></thead><tbody><tr><td>run_limit</td><td>一次 Agent 运行中的模型调用次数</td><td>单次模型 token 上限与工具执行时间</td></tr><tr><td>thread_limit</td><td>状态保留时的线程累计模型次数</td><td>全组织账户配额与身份授权</td></tr><tr><td>recursion_limit</td><td>图的执行步数</td><td>精确成本预算</td></tr><tr><td>请求超时 / 并发上限</td><td>等待时间 / 同时在途任务数</td><td>外部服务的幂等与取消机制</td></tr></tbody></table><p>本教程的真实模型连接设置 <code>timeout=30</code> 和有限重试；这不意味着整个 Agent 必定在 30 秒内结束，因为多次模型与工具调用会叠加。应分别记录单次请求、整个任务与端到端体验的时间预算。</p><p>成本估算可先采用“各次输入 token × 输入单价 + 输出 token × 输出单价 + 外部工具成本”。实际价格由提供商决定，不能用一次离线实验推导。把用户、租户、运行次数与限额绑定到服务端身份，不能让模型修改配额。</p>"
+    },
+    {
+      "id": "concurrency",
+      "title": "流式、异步与批量的取舍",
+      "body": "<p>07 已演示 <code>stream(..., stream_mode=\"updates\")</code>。流式降低的是用户等待反馈的感受，不自动减少总推理时间。前端应清楚地区分“正在查资料”“等待审批”“已完成”，只在收到明确最终状态后关闭任务。</p><p>04 的 <code>ainvoke</code> 适用于异步调用链；<code>batch</code> 为多个独立输入统一调度。吞吐受提供商限流、数据库连接池、CPU 与网络共同约束。增加并发前先测延迟与错误率，限制在途请求，避免重试把故障放大。</p><p>取消一个 Python 协程不保证已经发送的外部写请求被撤回。写操作仍需要请求标识、幂等键与结果核对。一次服务端超时也可能发生在写入成功之后，不能盲目重试“创建工单”。19 会把这一点落实为数据库约束。</p><p>Windows 某些受限沙箱会禁止事件循环用于唤醒的本地 socket，导致最小 <code>asyncio.run</code> 也无法运行。这与 LangChain API 不兼容不同；本交付在允许本地事件循环的执行环境实际验证了异步示例。</p>"
+    },
+    {
+      "id": "practices",
+      "title": "可维护的策略设计",
+      "body": "<ul><li>为每个错误类别定义动作：输入错误请求补充信息；瞬时网络错误有限重试；权限错误直接拒绝；代码错误记录并终止。</li><li>只重试确认安全的操作。读取通常更容易重试；写入必须先实现幂等，再讨论指数退避与随机抖动。</li><li>日志记录 request_id、工具名、耗时、错误码和状态，默认不记录完整提示词或工具原始输出。</li><li>预算超限、人工审批暂停和普通成功必须是不同的业务状态，不能只用“最后一条消息非空”判定成功。</li></ul>"
+    },
+    {
+      "id": "exercises",
+      "title": "练习：故障应如何结束",
+      "body": "<ol><li><strong>基础：</strong>把示例中未知服务改为 vpn。验收：不再出现错误 ToolMessage，工具返回 available。</li><li><strong>进阶：</strong>把 run_limit 分别设为 1、2、3。验收：脚本模型计数不会超过上限；解释为何上限为3时实际只需要2次。</li><li><strong>挑战：</strong>为写工单工具设计“响应丢失后重试”的验收用例。验收：重复请求返回同一结果，记录可追溯，且不会绕过原审批。实现参照 19。</li></ol><p>下一章把这些可观察性质组织成回归测试与评估集。</p>"
+    }
+  ],
+  "sources": [
+    {
+      "title": "Middleware overview",
+      "url": "https://docs.langchain.com/oss/python/langchain/middleware/overview"
+    },
+    {
+      "title": "LangChain 1.2.0 内置中间件源码",
+      "url": "https://github.com/langchain-ai/langchain/tree/langchain%3D%3D1.2.0/libs/langchain_v1/langchain/agents/middleware"
+    },
+    {
+      "title": "Python asyncio tasks",
+      "url": "https://docs.python.org/3.12/library/asyncio-task.html"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "slug": "04-chains",
+  "title": "04 · Chain 与 LCEL：连接可预测的流程",
+  "chapter": "基础篇",
+  "level": "入门",
+  "minutes": 45,
+  "summary": "用 Runnable 与管道表达固定流程，理解顺序、并行、批量和异步，并判断什么时候无需 Agent。",
+  "goals": ["解释 Chain 概念与旧 LLMChain 类的区别", "构建 prompt | model | parser 流程", "运行 invoke、batch 和 ainvoke，并识别输入输出契约"],
+  "prerequisites": ["完成 02 模型与消息、03 提示模板", "知道 Python 函数返回值；异步部分可先跟着运行"],
+  "sections": [
+    {"id": "concept", "title": "链是一种流程，不等于某个旧类", "body": "<p>Chain 描述的是把多个处理步骤连接起来：前一步的输出成为后一步的输入。例如“填充提示 → 调用模型 → 取出文本”是一条简单链；“检索资料 → 生成答案 → 检查引用”也是链。流程固定时，把每一步显式写出来通常更容易调试与测试。</p><p>LangChain 的名称中有 Chain，但在 1.2 教程里不应继续把旧版 <code>LLMChain</code> 当作唯一入口。基础编排使用 <code>langchain_core</code> 中的 Runnable 与 LCEL，即 LangChain Expression Language。旧类与迁移问题放在后面的迁移页处理。Agent 则使用 <code>create_agent</code>，两者并不互相排斥。</p><p>LCEL 的竖线 <code>|</code> 表示把兼容的 Runnable 顺序组合，不是向操作系统执行管道命令。读代码时应逐段标出类型：<strong>dict → ChatPromptValue → AIMessage → str</strong>。如果某一步拿到了不符合预期的数据，先修复接口，而不是再往提示里追加一句话。</p>"},
+    {"id": "interface", "title": "Runnable 提供什么", "body": "<table><thead><tr><th>接口或组件</th><th>用途</th><th>需要留意</th></tr></thead><tbody><tr><td>invoke</td><td>处理一个输入</td><td>返回值由最后一个组件决定</td></tr><tr><td>batch</td><td>处理多个独立输入</td><td>限制并发，避免超出服务额度</td></tr><tr><td>ainvoke</td><td>异步等待一次执行</td><td>不能在已有事件循环中再次 asyncio.run</td></tr><tr><td>RunnableLambda</td><td>把普通 Python 变换接入流程</td><td>函数输入输出仍需明确</td></tr><tr><td>RunnableParallel</td><td>多个分支接收同一个输入</td><td>每个分支可能产生独立费用或副作用</td></tr></tbody></table><p>“并行”与“批量”不是同一个维度。并行是一个输入走多个分支；批量是多个输入走同一流程。它们都不保证让模型本身变快，只是改变应用安排工作的方式。是否受益取决于网络等待、服务端限流和本地资源。</p>"},
+    {"id": "example", "title": "运行：从一条链到两个分支", "body": "<p>执行 <code>python examples/04_chains.py</code>。依赖为锁文件中的 LangChain 1.2.0 与配套包。示例使用固定模型，在离线环境中真实执行 LCEL 编排。</p><example path=\"examples/04_chains.py\"></example><p>第一行得到字符串回答；批量结果数为 <code>2</code>；并行结果包含 <code>answer</code> 与 <code>question</code> 两个键；异步调用返回同一测试回答。固定模型只说明数据流通了，不能证明两个不同问题都被正确理解。</p><p><code>RunnableParallel</code> 的 question 分支只是提取原问题，不会额外调用模型。若把它换成另一条模型链，就会增加一次模型调用。评估性能时要数真实的模型调用和工具调用，不能只数最外层 <code>invoke</code> 出现了几次。</p>"},
+    {"id": "choose", "title": "怎样选择链、Agent 与 LangGraph", "body": "<p>输入步骤已知时先选固定链。例如每张工单都必须分类，再从相同知识库检索，最后生成答复，这一流程可以确定地执行。输入不同会改变数据，但不必让模型重新决定执行路线。</p><p>当任务需要模型按情况选择工具、读取结果后再决定下一步时，进入 Agent 章节。例如用户先问工单状态，随后请求查制度，工具选择随语境变化。Agent 的灵活性也带来成本、延迟和失败路径增多，因此需要循环上限、权限检查和评估。</p><p>当工作流还需要明确分支、人工节点、恢复或更细的状态控制时，可以使用 LangGraph。LangChain 1.2 的 <code>create_agent</code> 建立在 LangGraph 之上；无需为了“高级”而一开始手写图。先掌握数据契约，再按实际控制需求选择层级。</p>"},
+    {"id": "practice", "title": "练习：观察每一步的数据", "body": "<ol><li><strong>入门：</strong>分别调用 prompt、model、parser，打印各自结果的类型，再比较与整条链结果。验收条件：能够写出四个阶段的数据类型。</li><li><strong>进阶：</strong>增加 <code>RunnableLambda</code>，在最终答案前加上“IT 服务台：”。验证输出是字符串且只加一次前缀，不改变消息阶段的数据类型。</li><li><strong>挑战：</strong>给 RunnableParallel 增加 <code>question_length</code> 分支，计算原问题字符数。验收条件：同一个输入返回三个键，并且新增分支不调用模型。再把三组输入交给 batch，检查输出顺序与输入顺序对应。</li></ol><details><summary>参考方向</summary><p>新增分支可使用 <code>RunnableLambda(lambda item: len(item['question']))</code>。检查每个输出中的 question 与对应输入相同，比只检查列表长度更能捕获接线错误。</p></details>"},
+    {"id": "pitfalls", "title": "常见误区与最佳实践", "body": "<ul><li><strong>不要把所有逻辑都塞进链。</strong>简单 Python 校验、数据库事务和业务权限仍可放在普通函数中。只有组合确实更清楚时才包装 Runnable。</li><li><strong>限制并发与重试。</strong>批量速度提高可能伴随 429 限流。重试写操作可能产生重复副作用，不能给整条链无差别套重试。</li><li><strong>注意事件循环。</strong>本例是命令行程序，所以可以使用 asyncio.run；在 Notebook 或异步 Web 框架中，通常直接 await。</li><li><strong>检查类型比复制示例更有效。</strong>StrOutputParser 提取文本，不会保证文本是合法 JSON，也不会保证内容符合公司政策。</li></ul>"},
+    {"id": "next", "title": "下一步：约束输出", "body": "<p>当答案要进入程序逻辑时，普通字符串不够稳定。继续学习 <a href=\"05-structured.html\">05 结构化输出</a>，把工单分类结果变成可以验证的对象。之后再用 <a href=\"06-tools.html\">06 工具调用</a>让模型连接业务能力。</p>"}
+  ],
+  "sources": [
+    {"title": "langchain-core 1.2.5：Runnable 源码", "url": "https://github.com/langchain-ai/langchain/blob/langchain-core%3D%3D1.2.5/libs/core/langchain_core/runnables/base.py"},
+    {"title": "LangChain 官方：v1 迁移说明", "url": "https://docs.langchain.com/oss/python/migrate/langchain-v1"}
+  ]
+}

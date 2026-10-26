@@ -1,0 +1,64 @@
+{
+  "slug": "21-reference",
+  "title": "21 · 参考手册：术语、目录与交接",
+  "chapter": "附录与交接",
+  "level": "入门",
+  "minutes": 30,
+  "summary": "一页查看完整课程结构、运行入口、版本职责和交接文件组织方式，并用自测定位需要回看的章节。",
+  "goals": [
+    "快速找到每个概念与项目阶段的入口",
+    "区分离线阅读、离线示例和在线模型调用",
+    "仅依据 HANDOFF.md 即可恢复维护与验证工作"
+  ],
+  "prerequisites": [
+    "可作为目录随时查阅",
+    "完整自测建议完成基础、RAG 与实战章节后进行"
+  ],
+  "sections": [
+    {
+      "id": "glossary",
+      "title": "术语速查：理解职责比记缩写重要",
+      "body": "<table><thead><tr><th>中文 / 英文</th><th>本教程中的含义</th><th>不要混淆</th></tr></thead><tbody><tr><td>消息 / Message</td><td>带角色与元数据的模型上下文单位</td><td>不只是字符串</td></tr><tr><td>提示模板 / Prompt Template</td><td>把变量组织成文本或聊天消息</td><td>本身不调用模型</td></tr><tr><td>链 / Chain</td><td>按既定连接执行的处理流程</td><td>概念不等于旧 LLMChain 类</td></tr><tr><td>Runnable / LCEL</td><td>可组合调用接口与表达方式</td><td>组合不能消除类型契约</td></tr><tr><td>结构化输出 / Structured Output</td><td>满足字段契约的模型结果</td><td>结构正确不等于事实正确</td></tr><tr><td>工具调用 / Tool Calling</td><td>模型提出工具名与参数，应用执行</td><td>绑定不等于执行</td></tr><tr><td>智能体 / Agent</td><td>模型结合工具结果迭代选择下一步</td><td>循环需要预算与边界</td></tr><tr><td>记忆 / Memory</td><td>短期线程状态或跨线程长期信息</td><td>checkpointer 与 store 职责不同</td></tr><tr><td>向量表示 / Embedding</td><td>把内容映射为可比较的数值向量</td><td>相似度不是事实证据</td></tr><tr><td>检索器 / Retriever</td><td>根据问题返回候选文档</td><td>候选需检查权限与相关性</td></tr><tr><td>检索增强生成 / RAG</td><td>检索资料后基于证据生成回答</td><td>不自动消除幻觉</td></tr><tr><td>人在回路 / HITL</td><td>在明确动作之前暂停，接受人工决定</td><td>应批准具体参数</td></tr><tr><td>幂等 / Idempotency</td><td>同一请求重复到达时避免重复副作用</td><td>不是简单捕获异常</td></tr></tbody></table>"
+    },
+    {
+      "id": "pages",
+      "title": "完整页面规划与内容要点",
+      "body": "<p>课程共 22 页。首页给出路线，01–14 建立基础与工程能力，15–19 沿同一个企业 IT 服务台项目递进，20–21 支持迁移、复习和交接。每页都带前置知识、难度、目标、页内目录、前后页导航与完成标记。</p><table><thead><tr><th>页面</th><th>核心内容与学习产物</th></tr></thead><tbody><tr><td><a href=\"index.html\">首页 · 学习路线</a></td><td>概念关系、推荐顺序、阶段目标、离线使用说明</td></tr><tr><td><a href=\"01-setup.html\">01 环境</a></td><td>虚拟环境、精确依赖、离线与在线运行边界</td></tr><tr><td><a href=\"02-messages.html\">02 模型与消息</a></td><td>角色、调用输入输出、历史与流式片段</td></tr><tr><td><a href=\"03-prompts.html\">03 提示模板</a></td><td>文本/聊天模板、变量、历史占位、输入检查</td></tr><tr><td><a href=\"04-chains.html\">04 Chain 与 LCEL</a></td><td>Runnable 顺序、并行、批量、异步与流程选择</td></tr><tr><td><a href=\"05-structured.html\">05 结构化输出</a></td><td>Pydantic、解析失败、模型与 Agent 输出策略</td></tr><tr><td><a href=\"06-tools.html\">06 工具调用</a></td><td>schema、白名单、执行闭环、工具消息配对</td></tr><tr><td><a href=\"07-agents.html\">07 Agent</a></td><td>create_agent、循环状态、工具结果与停止条件</td></tr><tr><td><a href=\"08-memory.html\">08 Memory</a></td><td>短期/长期记忆、线程隔离、持久化边界</td></tr><tr><td><a href=\"09-rag-index.html\">09 RAG 索引</a></td><td>文档、切分、元数据、向量与检索检查</td></tr><tr><td><a href=\"10-rag-answer.html\">10 RAG 回答</a></td><td>证据组织、引用、无资料处理与评估</td></tr><tr><td><a href=\"11-agentic-rag.html\">11 Agentic RAG</a></td><td>把检索作为工具、选择流程与成本边界</td></tr><tr><td><a href=\"12-runtime.html\">12 运行时</a></td><td>中间件、错误处理、流式与运行预算</td></tr><tr><td><a href=\"13-testing.html\">13 测试评估</a></td><td>确定性回归、质量指标、在线与离线验证分工</td></tr><tr><td><a href=\"14-production.html\">14 生产实践</a></td><td>权限、提示注入、性能、可观测性与上线检查</td></tr><tr><td><a href=\"15-project-1.html\">15 实战阶段一</a></td><td>单工具 IT 助手，跑通最小 Agent 闭环</td></tr><tr><td><a href=\"16-project-2.html\">16 实战阶段二</a></td><td>多工具与身份上下文，建立访问边界</td></tr><tr><td><a href=\"17-project-3.html\">17 实战阶段三</a></td><td>加入会话记忆与跨用户隔离</td></tr><tr><td><a href=\"18-project-4.html\">18 实战阶段四</a></td><td>加入企业知识检索与来源证据</td></tr><tr><td><a href=\"19-project-5.html\">19 实战阶段五</a></td><td>人工批准、幂等写入、审计与回归验收</td></tr><tr><td><a href=\"20-migration.html\">20 迁移与排错</a></td><td>旧接口映射、实际兼容性坑、文档版本漂移</td></tr><tr><td><a href=\"21-reference.html\">21 参考与交接</a></td><td>术语、完整目录、运行命令、交接组织与自测</td></tr></tbody></table>"
+    },
+    {
+      "id": "tree",
+      "title": "整体目录结构",
+      "body": "<p>生成的 HTML 与内容源文件分开存放。维护时编辑 content 或代码示例，再运行构建脚本；直接改生成的 HTML 会在下次构建时被覆盖。下面列出交付结构，临时虚拟环境与 Python 缓存不是教程必需内容。</p><pre><code class=\"language-text\">langchain-1.2-tutorial/\n├── index.html                     # 从这里打开\n├── 01-setup.html … 14-production.html\n├── 15-project-1.html … 19-project-5.html\n├── 20-migration.html\n├── 21-reference.html\n├── assets/\n│   ├── site.css                   # 响应式布局，本地资源\n│   ├── syntax.css                 # 构建时生成的语法高亮样式\n│   ├── site.js                    # 目录、复制、学习进度与导入导出\n│   └── catalog.json               # 生成的章节清单\n├── content/                       # index + 01…21 的 JSON 内容源\n├── examples/\n│   ├── 01_check_environment.py\n│   ├── 02_messages.py … 14_security.py\n│   ├── common.py                  # 固定模型与可选在线模型配置\n│   └── rag_support.py             # 教学检索辅助代码\n├── project/\n│   ├── helpdesk.py                # 五阶段共用的实战实现\n│   ├── stage1.py … stage5.py      # 各阶段入口\n│   └── check_project.py           # 权限、批准、事务幂等回归\n├── tools/\n│   ├── build_site.py              # 将内容与代码构建为 HTML\n│   ├── check_site.py              # 链接、锚点与离线资源检查\n│   ├── run_examples.py            # 批量验证代码\n│   ├── browser_check.py           # 浏览器离线交互与响应式验证\n│   └── package_site.py            # 选择交付物打包\n├── requirements.txt              # 明确的直接依赖\n├── requirements.lock.txt         # 完整验证环境的固定版本\n├── validation/                   # 回归、链接、浏览器报告与截图\n├── README.md                      # 快速使用与维护入口\n└── HANDOFF.md                     # 下次会话首先阅读\n</code></pre>"
+    },
+    {
+      "id": "dependencies",
+      "title": "依赖职责与运行边界",
+      "body": "<table><thead><tr><th>依赖</th><th>固定版本</th><th>职责</th></tr></thead><tbody><tr><td>Python</td><td>本次验证 3.12.10</td><td>运行示例与构建脚本；兼容范围以包声明和实际验证为准</td></tr><tr><td>langchain</td><td>1.2.0</td><td>Agent 工厂与中间件</td></tr><tr><td>langchain-core</td><td>1.2.5</td><td>消息、模板、Runnable、工具等基础接口</td></tr><tr><td>langgraph / langgraph-prebuilt</td><td>均为 1.0.5</td><td>图运行与 Agent 依赖组件</td></tr><tr><td>langchain-openai</td><td>1.1.6</td><td>可选真实模型接入</td></tr><tr><td>langchain-text-splitters</td><td>1.1.0</td><td>文档切分</td></tr><tr><td>numpy</td><td>2.2.6</td><td>InMemoryVectorStore 的本地相似度计算</td></tr><tr><td>pygments</td><td>2.19.2</td><td>构建时生成静态语法高亮</td></tr></tbody></table><p><strong>离线阅读：</strong>直接打开 index.html，浏览器不依赖 CDN、远程字体或模型服务。<strong>离线运行：</strong>首次安装好锁文件依赖后，默认固定模型示例不需要密钥。没有预先下载的依赖时，首次安装仍需联网；本交付不把 Python 或所有 wheel 包打包进去。<strong>在线调用：</strong>只有显式选择 --live 的分支会调用已配置模型，需网络、有效账户权限并可能计费。</p><p>学习进度保存在当前浏览器，并通过站内链接携带。file:// 下不同浏览器的存储策略可能不同；切换设备、浏览器或重新解压前先导出进度 JSON，在新位置导入。完成标记表示你自行确认练习完成，不是自动考试成绩。</p>"
+    },
+    {
+      "id": "commands",
+      "title": "日常运行与验证入口",
+      "body": "<p>在教程根目录使用已配置的虚拟环境。以下命令分别负责环境检查、代码回归、重新生成页面和检查页面；每次更改后只重跑受影响检查，交付前再运行全套。</p><pre><code class=\"language-bash\">python -m pip install -r requirements.lock.txt\npython -m pip check\npython examples/01_check_environment.py\npython examples/04_chains.py\npython project/stage1.py\npython project/stage5.py\npython project/check_project.py\npython tools/run_examples.py\npython tools/build_site.py\npython tools/check_site.py\n</code></pre><p>阶段五涉及批准分支，先阅读该页关于暂停、批准和拒绝的说明，再使用对应参数。查看 <a href=\"README.md\">README.md</a> 可获得入口说明；查看 <a href=\"validation/report.json\">validation/report.json</a> 可获得最终实际检查结果。在线模型效果、外部服务可用性和生产负载表现需另外验证，不能由固定模型回归代替。</p>"
+    },
+    {
+      "id": "handoff",
+      "title": "HANDOFF.md 的组织方式",
+      "body": "<p><a href=\"HANDOFF.md\">HANDOFF.md</a> 是给下一次会话的工作上下文，不是只有待办项的摘要。接手者应先读它，再根据其中标明的文件和命令继续，无须重新查找本次聊天记录。</p><table><thead><tr><th>部分</th><th>必须保存的信息</th></tr></thead><tbody><tr><td>任务与范围</td><td>用户要求、中文/Python 1.2 基线、22页交付与离线目标</td></tr><tr><td>已完成</td><td>完成的页面、示例、五阶段项目、导航进度与交付文件</td></tr><tr><td>进行中与待解决</td><td>尚未完成的具体事项、阻塞原因；无事项时明确写无</td></tr><tr><td>关键决策</td><td>固定版本、静态构建、离线固定模型与在线分支、项目安全边界</td></tr><tr><td>目录与入口</td><td>工作目录、首页、内容源、构建脚本、测试脚本和报告路径</td></tr><tr><td>验证记录</td><td>命令、解释器、日期、实际结果；区分通过、未执行与受限</td></tr><tr><td>已知限制</td><td>真实模型未测部分、教学检索限制、持久化与部署边界</td></tr><tr><td>下一步计划</td><td>按优先级列出可以直接执行的动作与完成判据</td></tr></tbody></table><p>每次切换会话前更新状态和验证结果。不要保存 API 密钥、访问令牌或真实员工数据；只记录凭据应如何由环境提供。若代码已改变而报告还是旧的，应在交接中明确标记需要重跑，不能继续声称全部通过。</p>"
+    },
+    {
+      "id": "selfcheck",
+      "title": "完成课程后的知识自测",
+      "body": "<ol><li>模型对象为什么不等于会话记忆？提示模板的输出是什么类型？</li><li>固定链与 Agent 的控制流程有什么不同？什么时候固定链更合适？</li><li>bind_tools 是否执行工具？为什么 ToolMessage 必须对应调用 ID？</li><li>Pydantic 校验通过为什么仍可能产生错误业务结果？</li><li>checkpointer 与 store 分别解决什么问题？线程 ID 为什么不能代替鉴权？</li><li>RAG 没检索到资料时应该如何处理？文档中的恶意指令为什么不能变成权限？</li><li>人工批准后网络重试，如何保证没有重复创建工单？</li><li>pip check 通过为什么仍需要实际导入与 invoke？</li></ol><details><summary>参考答案与复习入口</summary><p>1：模型调用需要显式上下文；模板生成 PromptValue，见02–03。2：链的路线由程序预先指定，Agent 根据状态选择动作，见04、07。3：绑定只提供定义，执行由应用完成，ID 用于配对，见06。4：结构约束不验证来源事实或权限，见05。5：前者保存线程状态，后者保存跨线程信息；身份仍需可信鉴权，见08、11。6：拒绝编造并说明证据不足，资料只作数据，见09–11、14。7：批准明确参数，写入使用持久化幂等约束和事务，见19。8：元数据约束不能覆盖运行时符号兼容，见20。</p></details><p><strong>实践验收：</strong>从阶段一运行到阶段五，说明每阶段新增了哪一项能力；展示一次拒绝写入、一次批准写入与重复请求不重复建单的回归结果。最后导出学习进度，并能向另一位开发者解释 HANDOFF 中哪些验证尚未覆盖真实生产环境。</p>"
+    }
+  ],
+  "sources": [
+    {
+      "title": "LangChain 1.2.0 发布包",
+      "url": "https://pypi.org/project/langchain/1.2.0/"
+    },
+    {
+      "title": "LangChain 官方：概览",
+      "url": "https://docs.langchain.com/oss/python/langchain/overview"
+    }
+  ]
+}

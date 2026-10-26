@@ -1,0 +1,64 @@
+{
+  "slug": "11-agentic-rag",
+  "title": "11 · Agentic RAG：把检索交给工具，把权限留给应用",
+  "chapter": "检索与记忆",
+  "level": "高级",
+  "minutes": 50,
+  "summary": "把授权检索包装成工具，通过 create_agent 完成调用闭环，比较固定 RAG 与自主检索的收益和代价。",
+  "goals": [
+    "把 Retriever 能力封装为 Agent 工具",
+    "使用 ToolRuntime 隐藏可信租户上下文",
+    "检查 ToolMessage 与工具调用关联并控制循环预算"
+  ],
+  "prerequisites": [
+    "完成 06 工具、07 Agent、09–10 RAG",
+    "理解工具请求不等于工具执行",
+    "了解 dataclass 与类型标注"
+  ],
+  "sections": [
+    {
+      "id": "choice",
+      "title": "1. 从固定流程到模型选择",
+      "body": "<p>两阶段 RAG 的检索总是在生成之前执行。Agentic RAG 则把检索作为一种工具，让模型选择是否检索、使用什么查询，必要时多次查询。例如用户先问年假政策，再问“帮我查询申请状态”，Agent 可以组合知识检索和业务查询工具；纯粹问好时则可以直接回复。</p><p>增加选择权也增加不确定性：模型可能忘记检索、反复搜索、选错工具，或拿到证据后仍错误解释。这个模式不天然优于固定 RAG。如果所有请求都必须查制度，固定流程更容易约束和评测；只有任务确实包含动态工具选择时，再引入 Agent。</p><table><thead><tr><th>比较</th><th>两阶段 RAG</th><th>Agentic RAG</th></tr></thead><tbody><tr><td>谁决定检索</td><td>应用代码</td><td>模型发出工具请求</td></tr><tr><td>调用次数</td><td>主流程固定</td><td>随任务和模型决策变化</td></tr><tr><td>常见失败</td><td>检索不到、回答不忠实</td><td>上述失败加工具误选与循环</td></tr><tr><td>适用场景</td><td>制度问答、检索必经</td><td>检索和业务工具混合任务</td></tr></tbody></table>"
+    },
+    {
+      "id": "runtime",
+      "title": "2. 哪些参数给模型，哪些由应用注入",
+      "body": "<p>检索工具需要 query 和 tenant，但模型只应该看到 query。<code>ToolRuntime[Context]</code> 让工具从可信调用上下文获得租户，而不是让语言模型选择访问谁的数据。在函数签名里写 <code>runtime</code> 类型标注后，框架会注入运行信息；它不会出现在模型可见的工具参数 schema 中。</p><p>示例中的 <code>Context(tenant_id=\"acme\")</code> 由固定演示代码创建。真实服务应该在验证登录凭据、会话归属与权限后构造 Context。dataclass 类型本身不验证用户身份，隐藏 schema 参数也不会自动完成业务授权；两者必须与服务端校验配合。</p><p>工具定义应说明能查什么、返回什么、无结果如何表示。给检索查询设置长度与空值检查，限制一次返回证据数量和文本预算。不要把任意 URL 下载、任意 SQL 执行或跨租户搜索包装成一个宽泛的“万能检索工具”。</p>"
+    },
+    {
+      "id": "example",
+      "title": "3. 可运行：模型请求 → 工具执行 → 证据回复",
+      "body": "<p>依赖：<code>langchain==1.2.0</code>、<code>langchain-core==1.2.5</code>、<code>langgraph==1.0.5</code>，包括固定的 prebuilt 与 NumPy，完整清单见 <a href=\"requirements.lock.txt\">requirements.lock.txt</a>。从根目录运行 <code>python examples/11_agentic_rag.py</code>。</p><example path=\"examples/11_agentic_rag.py\"></example><p>预期答案为 <code>正式员工每年有 10 天年假。[leave-v1]</code>，工具调用次数为 1，并出现两条 PASS。第一条 AIMessage 携带预设工具请求，create_agent 实际执行工具并形成 ToolMessage；第二条模型响应给出预设答案。因此断言验证真实框架的工具调度与上下文注入，尚未测量模型是否会自主选择正确查询。</p><div class=\"callout\"><strong>在线实验入口</strong><p>设置 <code>OPENAI_API_KEY</code> 与支持工具调用的 <code>OPENAI_MODEL</code> 后运行 <code>python examples/11_agentic_rag.py --live</code>，可追加 <code>--question &quot;住宿报销上限是多少？&quot;</code>。在线分支根据真实调用 ID 检查工具结果，验证模型参数不包含可信身份，并要求答案引用来自本次授权检索结果；不会要求固定措辞、固定工具 ID 或恰好一次调用。模型未检索时明确提示未通过 RAG 证据验证；检索无证据时直接拒答；非法引用会报错。检索仍使用教学关键词向量。该入口需要网络，可能计费，本交付未调用真实 API。</p></div>"
+    },
+    {
+      "id": "inspect",
+      "title": "4. 看轨迹，而不只看最后一句话",
+      "body": "<p>默认离线例子的完整返回 messages 应按顺序包含：用户问题、带 tool_calls 的 AI 消息、tool_call_id 为 search-1 的 ToolMessage、最终 AI 回复。工具结果必须与请求 ID 对应，否则后续模型无法正确理解哪一份结果属于哪个调用。工具内部的检索是真实执行的，不是把预设文本伪装成检索结果。</p><p>代码还检查模型可见 schema 中没有 runtime 和 tenant_id，这能防止模型直接构造跨租户参数。它不意味着文档没有恶意内容，也不意味着调用者已被鉴权。在线分支的引用验证采用上一章的允许列表规则，同时核对工具证据的租户范围；仍须进一步核对事实依据。</p><p><code>recursion_limit=8</code> 限制图执行步数；它不是“最多八次工具调用”、token 上限或墙钟超时。一次步骤可能并行请求多个工具，模型提供方也可能重试。企业系统需要分别配置模型超时、工具超时、调用次数、总 token 与请求总时长预算，详见 <a href=\"12-runtime.html\">运行控制章</a>。</p>"
+    },
+    {
+      "id": "exercises",
+      "title": "5. 三档练习与验收",
+      "body": "<ol><li><strong>入门：</strong>打印所有消息的类型和工具 ID。验收：顺序中出现 AIMessage、ToolMessage、AIMessage；结果关联 search-1，且工具文本含 leave-v1。</li><li><strong>进阶：</strong>创建第二个全新的脚本模型实例，将查询设为“报销住宿”，将最终响应改为含 expense-v1 的住宿规定。验收：工具真实返回 500 元与发票要求，最终引用属于工具返回集合。不要重复使用已经耗尽响应列表的脚本模型。</li><li><strong>高级：</strong>使用 <code>--live --question</code> 构建三类问题：问好、制度问答、跨租户越权请求。验收：问好允许零次检索；制度问答必须有证据且引用正确；越权请求不能产生 beta 文档。记录工具选择正确率、工具调用次数和总延迟，对不合格轨迹保留脱敏诊断数据。</li></ol><p>想验证循环上限，可让测试模型连续发出检索调用，并准备足够多的预设响应。验收应捕获 <code>GraphRecursionError</code>，而不是碰巧先耗尽脚本模型响应。失败原因必须与正在测试的约束一致。</p>"
+    },
+    {
+      "id": "limits",
+      "title": "6. 误区、最佳实践与实战连接",
+      "body": "<p><strong>误区一：系统提示写“必须检索”就保证执行。</strong>模型仍可能直接作答。若某类问题必须检索，应通过确定性路由或中间件检查轨迹，失败时明确拒答；不要把提示要求当成程序不变量。</p><p><strong>误区二：更多工具等于更强。</strong>相似描述会增加误选，过多 schema 也占用上下文。先保留少量职责明确的工具，记录失败后再拆分或选择性暴露。检索是只读操作，提交报销则有副作用，两者的审批、重试和幂等策略应分别设计。</p><p><strong>误区三：证据中的命令可以直接执行。</strong>检索资料只能提供事实，不应改变授权策略或工具白名单。把网络出口、数据库权限和写操作审批落实在工具实现与服务端控制层；提示词只承担辅助约束。</p><p>至此，Prompt 组织请求，Chain 固定数据流，Memory 提供会话状态，RAG 提供外部证据，Tool Calling 连接业务能力，Agent 按任务调度工具。这些概念相互组合，而不是后者淘汰前者。接下来学习运行控制与测试，再进入 <a href=\"15-project-1.html\">企业项目第一阶段</a>，逐步组合上述能力。</p>"
+    }
+  ],
+  "sources": [
+    {
+      "title": "LangChain 官方：Tools 与 ToolRuntime",
+      "url": "https://docs.langchain.com/oss/python/langchain/tools"
+    },
+    {
+      "title": "LangChain 官方：Agents",
+      "url": "https://docs.langchain.com/oss/python/langchain/agents"
+    },
+    {
+      "title": "LangChain 官方：Runtime",
+      "url": "https://docs.langchain.com/oss/python/langchain/runtime"
+    }
+  ]
+}

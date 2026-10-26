@@ -1,0 +1,59 @@
+{
+  "slug": "16-project-2",
+  "title": "实战 2 · 多工具与任务边界",
+  "chapter": "递进实战",
+  "level": "进阶",
+  "minutes": 45,
+  "summary": "给工单查询增加服务健康检查，学习工具选择、结果组合和失败隔离。",
+  "goals": [
+    "明确每个工具的职责与输入约束",
+    "理解多工具调用中的依赖与并发",
+    "依据工具回执验收组合答案"
+  ],
+  "prerequisites": [
+    "实战 1 已运行通过",
+    "了解 ToolMessage 与工具调用 ID"
+  ],
+  "sections": [
+    {
+      "id": "delta",
+      "title": "本阶段只增加第二个只读数据源",
+      "body": "\n<p>员工现在问：“查询 IT-1001，并查看 VPN 服务是否正常。”工单状态说明个人请求的处理进展；服务状态说明共享基础设施是否可用。两个字段不能互相替代：服务恢复正常，不代表个人工单已经解决；工单显示处理中，也不能推断全公司的 VPN 已中断。</p>\n<p>本阶段在工具集合中新增 service_health，保留原有 get_ticket。没有新增记忆、知识库或写操作，这让一次验收失败仍能定位到较小范围。共享实现的 stage 参数只控制本章新增能力，阶段一的行为保持可复查。</p>\n<table><thead><tr><th>工具</th><th>输入</th><th>事实来源</th><th>授权</th></tr></thead><tbody><tr><td>get_ticket</td><td>ticket_id</td><td>演示工单表</td><td>租户与工单所有者</td></tr><tr><td>service_health</td><td>vpn / email</td><td>演示共享状态表</td><td>本例为全员可读</td></tr></tbody></table>"
+    },
+    {
+      "id": "tools",
+      "title": "用窄 schema 减少错误选择",
+      "body": "\n<example path=\"project/helpdesk.py\" region=\"read_tools\"></example>\n<p><code>Literal[\"vpn\", \"email\"]</code> 将支持范围表达为结构化参数约束。模型填写任意字符串时，工具输入验证会拒绝不合法值。类型检查只能保证输入形状和枚举范围，不能证明服务状态真实；真实实现还应从有认证的监控 API 获取时间戳和数据。</p>\n<p>工具描述需要回答“什么时候调用”和“返回什么”。“查询状态”太模糊；分别写成“当前用户工单状态”和“共享服务运行状态”，模型更容易区分。不要为每一种同义问法创建一个新工具，业务职责相同就复用同一 schema。</p>"
+    },
+    {
+      "id": "flow",
+      "title": "理解控制流，避免提前拼装答案",
+      "body": "\n<p>阶段二的离线轨迹是：发出 get_ticket 调用、拿到回执、发出 service_health 调用、拿到回执、输出组合结果。框架负责把工具返回包装为 ToolMessage 并再次调用模型。最终回复应保留两个事实，不能省略出现错误的那个工具。</p>\n<p>本次两个查询互不依赖，真实模型可以在同一轮提出两个调用。对于存在依赖的操作，例如“根据查询得到的服务编号读取详情”，应先拿到编号再发起下一步；不要把没有数据依赖与允许并行写入混为一谈。我们的顺序脚本用于稳定演示，不宣称它是最优延迟方案。</p>\n<example path=\"project/helpdesk.py\" region=\"agent_factory\"></example>\n<p>先阅读 stage=2 的分支即可；记忆、检索、审批分支会在后面三章逐步拆解。相同构造器让你能直接比较 tools、checkpointer、middleware 三项配置的演进。</p>"
+    },
+    {
+      "id": "run",
+      "title": "运行与验收",
+      "body": "\n<example path=\"project/stage2.py\"></example>\n<pre><code class=\"language-bash\">python project/stage2.py\npython project/stage2.py --live</code></pre>\n<p>依赖仍为 requirements.lock.txt，核心 langchain==1.2.0。默认输出应分别包含 get_ticket 和 service_health 两条工具回执，状态是“处理中”和“正常”，数据库保持零写入。在线模式需要模型支持工具调用，最终措辞可以不同，验收应针对回执中的字段，而非整段字符串相等。</p>\n<p>如果模型直接回答而未调用工具，应调整工具描述和系统提示，并加入调用记录的评测；不要因为最终文本碰巧正确就判为通过。模型即使温度设为零也不能保证所有线上请求产生相同轨迹。</p>"
+    },
+    {
+      "id": "exercises",
+      "title": "练习：从工具覆盖到失败隔离",
+      "body": "\n<ol><li><strong>入门：</strong>运行阶段二，统计 ToolMessage 数量。默认脚本应为 2 条；阶段一应为 1 条，比较新增能力是否符合预期。</li>\n<li><strong>进阶：</strong>将服务查询改为 email，再尝试不支持的 database。验证：合法枚举可执行，不合法参数不能得到伪造的“正常”结果；记录产生验证错误的位置。</li>\n<li><strong>高级：</strong>模拟监控 API 超时，仍允许工单查询成功。设计结构化错误回执与组合答案：工单状态正常展示，服务状态明确写“暂不可用”，禁止把失败默认为正常。验证两个事实不会相互覆盖。</li></ol>"
+    },
+    {
+      "id": "practice",
+      "title": "性能与可维护性提示",
+      "body": "\n<p>工具一多，常见失败不是“模型不够聪明”，而是职责重叠、返回值过长、缺少超时。优先让每个工具负责一个明确动作，对返回字段做裁剪，在服务调用层配置超时。只对可安全重试的读操作自动重试；加入写工具后必须重新审查重试策略。</p>\n<p>将工具执行耗时与模型生成耗时分开测量，才能判断应该优化网络调用还是减少模型轮次。本示例的本地字典几乎没有 I/O，不能用其耗时预测真实生产性能。下一步进入 <a href=\"17-project-3.html\">实战 3：会话记忆</a>，让员工无需重复上一轮的工单号。</p>"
+    }
+  ],
+  "sources": [
+    {
+      "title": "LangChain Agents：模型与工具循环",
+      "url": "https://docs.langchain.com/oss/python/langchain/agents"
+    },
+    {
+      "title": "LangChain 1.2.0 Agent 工厂",
+      "url": "https://github.com/langchain-ai/langchain/blob/langchain%3D%3D1.2.0/libs/langchain_v1/langchain/agents/factory.py"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "slug": "03-prompts",
+  "title": "03 · 提示模板：把输入变成稳定契约",
+  "chapter": "基础篇",
+  "level": "入门",
+  "minutes": 40,
+  "summary": "学习文本模板、聊天模板、变量、历史占位与局部绑定，让提示词和业务输入各司其职。",
+  "goals": ["选择 PromptTemplate 或 ChatPromptTemplate", "使用 MessagesPlaceholder 接入消息历史", "验证模板变量、花括号和用户输入的处理方式"],
+  "prerequisites": ["完成 02 模型与消息", "理解字符串格式化和关键字参数"],
+  "sections": [
+    {"id": "concept", "title": "模板解决的是输入组织问题", "body": "<p>如果每次调用都用字符串拼接部门名、问题和规则，提示词很快就会散落在不同函数中。改一个规则需要改多处，还容易漏掉必要字段。提示模板把固定说明与每次变化的数据分开，使输入可检查、可复用，也便于把提示变更纳入版本管理。</p><p><code>PromptTemplate</code> 适合生成一段文本；<code>ChatPromptTemplate</code> 保留 system、human、ai 等消息角色。本项目使用聊天模型，因此优先使用聊天模板。选择依据是下游接口需要什么数据，不是“聊天模板比文本模板更智能”。模板本身不会调用模型，也不会生成事实。</p><p>模板调用的过程是：<strong>变量字典 → PromptValue → 消息列表</strong>。下一章会把这个输出直接送给模型。在当前章节先打印结果，检查角色和字段，就能发现大量问题，无须支付一次模型调用费用。</p>"},
+    {"id": "variables", "title": "变量、默认值与历史插槽", "body": "<p>本例中的 <code>department</code> 来自应用配置，<code>question</code> 来自当前用户，<code>history</code> 是此前的消息对象列表。三者来源不同，不能随意互换。<code>partial(department=...)</code> 预先绑定稳定配置，让调用者只需传入本轮必要数据。</p><p><code>MessagesPlaceholder</code> 会把历史消息按原角色插入，适合承接上一章构造的列表。不要把历史先转成一大段字符串再塞进 system 消息，否则原来的角色边界消失，工具消息也可能无法正确配对。设置 <code>optional=True</code> 表示首轮可不提供历史，并不表示必填的用户问题也可以缺省。</p><p>模板默认采用类似 Python 格式化字符串的花括号变量。模板原文里需要显示 JSON 花括号时应使用双花括号；通过变量注入的普通字符串不会再次作为模板解析。需要区分“模板源码中的括号”与“用户值中的括号”。本例专门加入 <code>{unknown_key}</code>，用于验证这个边界。</p>"},
+    {"id": "example", "title": "运行：检查模板的真实输出", "body": "<p>执行 <code>python examples/03_prompts.py</code>。依赖由 <code>requirements.lock.txt</code> 固定，核心教学版本为 <code>langchain==1.2.0</code>。本例只格式化输入，不调用模型。</p><example path=\"examples/03_prompts.py\"></example><p>验收时应看到四个角色 <code>['system', 'human', 'ai', 'human']</code>。最后一条用户消息仍含字面值 <code>{unknown_key}</code>，而文本模板中的双花括号最终变成单花括号。删除 <code>question</code> 后应输出“缺失 question：已正确拒绝”。</p><p>读取 <code>input_variables</code> 能发现实际需要调用者填写的字段。将该检查放在开发阶段，有助于避免业务代码更名为 <code>query</code>，模板却仍期待 <code>question</code> 的错配。</p>"},
+    {"id": "design", "title": "如何写一个可维护的企业提示", "body": "<p>先说任务与边界，再给完成任务所需的数据，最后说明输出形式。例如工单分类提示应写清哪些类别可选、资料不足时如何表示，以及哪些字段必须保留。输出会被程序消费时，用下一章之后的结构化输出方案进一步验证，不能只依赖“请返回 JSON”这句话。</p><p>把少量示例作为消息对加入模板，是 few-shot 提示的一种方式。示例应覆盖容易混淆的边界，例如“单人密码重置”与“全员无法登录”的区别。不要为了增加示例数量复制几十条近似样本；先用有代表性的测试集验证改动是否带来改善。</p><p>在 RAG 中，检索到的正文应作为不可信资料传入，并明确资料与应用指令的区别。分隔标签有助于组织内容，但不是安全屏障。即使资料写着“忽略所有规则”，也不能因此获得数据库写权限；真实权限控制仍在工具执行层。</p>"},
+    {"id": "practice", "title": "练习：可检查的提示输入", "body": "<ol><li><strong>入门：</strong>把默认部门改成客服部。验证第一条消息包含新部门，而且 <code>input_variables</code> 仍只有 <code>question</code>。</li><li><strong>进阶：</strong>不传入 <code>history</code>，验证生成消息数变为 2；再添加一对历史消息，验证消息数变为 4，角色顺序正确。</li><li><strong>挑战：</strong>添加必填变量 <code>allowed_categories</code>，把允许的工单类别由 Python 列表转换成明确文本后注入。验收条件：漏传变量时失败；传入后模板包含所有类别；用户问题中的花括号保持原样。</li></ol><details><summary>检查重点</summary><p>模板测试应关注字段与角色，不要依赖提示词全文相等。合理的措辞调整不应导致大量测试失效。对于第三题，可以用 <code>all(category in text for category in categories)</code> 检查类别覆盖。</p></details>"},
+    {"id": "pitfalls", "title": "常见误区与最佳实践", "body": "<ul><li><strong>不要把用户输入当作模板源码。</strong>模板由应用维护，用户输入只作为变量值传入。不要让外部文本选择模板引擎或拼出可执行表达式。</li><li><strong>不要把秘密放进提示。</strong>模型看不到密钥通常就不需要知道它；工具在服务端读取凭据即可。提示日志同样需要脱敏。</li><li><strong>提示版本应可追踪。</strong>记录模板版本和模型配置，才能判断回归来自提示、模型还是检索资料。小型项目先用普通源码版本管理就够了。</li><li><strong>控制上下文预算。</strong>历史与示例越多，成本和延迟通常越高。优先保留对当前任务有帮助的信息，后续记忆章节再讨论裁剪与摘要。</li></ul>"},
+    {"id": "next", "title": "从模板走向链", "body": "<p>现在你已经能稳定生成模型输入。继续学习 <a href=\"04-chains.html\">04 链与 LCEL</a>，把模板、模型与输出处理连接起来；如果消息角色仍不清楚，先返回 <a href=\"02-messages.html\">02 模型与消息</a>。</p>"}
+  ],
+  "sources": [
+    {"title": "langchain-core 1.2.5：ChatPromptTemplate 源码", "url": "https://github.com/langchain-ai/langchain/blob/langchain-core%3D%3D1.2.5/libs/core/langchain_core/prompts/chat.py"},
+    {"title": "langchain-core 1.2.5：PromptTemplate 源码", "url": "https://github.com/langchain-ai/langchain/blob/langchain-core%3D%3D1.2.5/libs/core/langchain_core/prompts/prompt.py"}
+  ]
+}

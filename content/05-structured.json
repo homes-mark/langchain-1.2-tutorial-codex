@@ -1,0 +1,24 @@
+{
+  "slug": "05-structured",
+  "title": "05 · 结构化输出：让答案进入程序",
+  "chapter": "基础篇",
+  "level": "进阶",
+  "minutes": 45,
+  "summary": "区分自然语言、合法 JSON、通过 schema 的对象和业务上真实的数据，用 Pydantic 建立明确的输出契约。",
+  "goals": ["设计工单输出 schema", "运行 PydanticOutputParser 与失败路径", "区分模型结构化输出、Agent response_format 与内容真实性"],
+  "prerequisites": ["完成 04 Chain 与 LCEL", "理解 JSON、Python 类型提示与异常捕获"],
+  "sections": [
+    {"id": "concept", "title": "能读懂的回答不一定能被程序使用", "body": "<p>服务台系统需要的是标题、优先级和影响人数，而不是任意格式的一段文字。如果每次用字符串切分寻找“优先级：”，模型只要换一种措辞就可能让程序解析失败。结构化输出先定义字段契约，再让模型按契约返回结果，最后执行类型和约束校验。</p><p>这里有四个不同层次：文本可以读；文本是合法 JSON；JSON 满足 schema；字段表达的事实真实可靠。通过前一个层次不代表通过后一个。例如人数为 <code>12</code> 的对象可以满足 schema，但如果原始工单说的是 21 人，结构依然正确，事实却错了。</p><p>本页先用 <code>PydanticOutputParser</code> 看清“格式说明 → 模型文本 → 解析校验”的过程，再提供在线 <code>with_structured_output</code> 分支。结构化输出适合分类、抽取与应用接口，不应为了形式统一强迫所有自由文本对话都生成庞大 JSON。</p>"},
+    {"id": "schema", "title": "设计一个小而清楚的 schema", "body": "<p><code>TicketSummary</code> 有三个字段：非空且长度有限的标题、只能取 low/medium/high 的优先级，以及大于零的影响人数。<code>extra='forbid'</code> 拒绝未声明字段；人数使用严格整数，避免把字符串或小数悄悄转换后当成已验证数据。</p><p>这些约束应来自业务需要，不是为了把类型定义写得复杂。允许“未知”的字段就应该显式设计未知状态，例如可选人数或单独的证据字段，而不是鼓励模型为了满足必填而猜数。本例原文已经提供人数，便于集中学习验证；真实工单经常缺字段，必须单独处理。</p><p>字段说明帮助模型理解含义，但最终的数值范围、枚举和额外字段限制由程序执行。模型抽出的工单号、员工身份、权限范围，仍需到可信系统核实；不能因为它被装进 Pydantic 对象，就成为授权凭据。</p>"},
+    {"id": "example", "title": "运行：成功对象与拒绝路径", "body": "<p>执行 <code>python examples/05_structured.py</code>。依赖固定为 LangChain 1.2.0 与锁文件中的 Pydantic 等配套版本。默认离线运行，固定模型仅负责返回预设 JSON。</p><example path=\"examples/05_structured.py\"></example><p>应得到包含 <code>priority='high'</code> 和 <code>affected_users=12</code> 的对象，并看到“非法枚举与人数：已正确拒绝”。失败输入本身是合法 JSON，拒绝原因是它不符合业务 schema。这正是只做 <code>json.loads</code> 无法完成的检查。</p><p><code>get_format_instructions()</code> 生成说明并放进提示；解析器在输出之后执行验证。这条链没有让模型预先保证所有结果合规。因此错误必须是预期的程序分支：记录失败类别，必要时在预算内重试，或转交人工补充信息。</p>"},
+    {"id": "strategies", "title": "三种接入位置，不要混在一起", "body": "<table><thead><tr><th>方式</th><th>使用位置</th><th>结果与限制</th></tr></thead><tbody><tr><td>PydanticOutputParser</td><td>普通链的输出端</td><td>解析模型文本；格式失败会抛异常</td></tr><tr><td>model.with_structured_output</td><td>单次模型调用</td><td>由模型集成提供支持；能力取决于提供商和模型</td></tr><tr><td>create_agent(response_format=...)</td><td>Agent 最终输出</td><td>使用 Agent 的结构化输出机制；从 structured_response 读取对象</td></tr></tbody></table><p>在 Agent 中，可以明确选用 <code>ToolStrategy</code> 或 <code>ProviderStrategy</code>。前者利用工具调用协议表达结果，后者利用提供商原生结构化输出；都必须考虑所选模型的能力。使用 schema 类型的自动策略选择时，更应检查当前锁定版本与模型配置，不要把最新文档示例直接套进历史版本。</p><p>在线演示执行 <code>python examples/05_structured.py --live</code>，复用环境页设置的模型与密钥。它使用模型级结构化输出。真实输出的标题可能不同，因此验收关注类型、约束与原文事实，而不是逐字匹配。离线分支不能证明提供商支持该能力。</p>"},
+    {"id": "practice", "title": "练习：验证比格式更进一步", "body": "<ol><li><strong>入门：</strong>把有效 JSON 的人数改成 0，直接调用 parser.parse。验收条件：捕获 OutputParserException，程序不得继续创建工单。</li><li><strong>进阶：</strong>增加一个只允许“软件”或“硬件”的类别字段，并同步修改固定模型数据。分别测试缺字段和非法类别，确认都被拒绝。</li><li><strong>挑战：</strong>准备三条测试输入：合法对象、合法 JSON 但非法字段、结构合法但事实与原文不符。分别记录结构校验与事实校验结果。验收条件：第三条不能被错误记为“事实正确”，说明需要另外设计证据核对。</li></ol><details><summary>参考判断</summary><p>结构校验可以完全自动化。对本例的事实校验，可以直接比较原文已明确提供的人数；更复杂的事实需要可信来源或人工标注。模型给出的自评置信度不能替代该检查。</p></details>"},
+    {"id": "pitfalls", "title": "常见误区与最佳实践", "body": "<ul><li><strong>不要删除错误输出后假装成功。</strong>保留脱敏后的失败类别与 schema 版本，便于定位是提示、模型能力还是数据问题。</li><li><strong>不要无限“修复 JSON”。</strong>修复可能改变含义，还会增加延迟和费用。先明确最大尝试次数，失败后提供可恢复路径。</li><li><strong>不要把结构化结果当作安全命令。</strong>金额、账号、工具参数即使校验通过，仍需授权、业务规则与幂等检查。</li><li><strong>缩小输出面。</strong>只返回下游实际需要的字段。字段越多，缺失、矛盾、泄露和升级不兼容的可能性越大。</li></ul>"},
+    {"id": "next", "title": "从数据到行动", "body": "<p>输出 schema 规定“模型交给程序什么数据”；<a href=\"06-tools.html\">06 工具调用</a>会进一步规定“模型可以请求程序做什么”。两者共享类型约束思想，但工具可能产生副作用，需要更严格的执行边界。</p>"}
+  ],
+  "sources": [
+    {"title": "LangChain 官方：Structured output", "url": "https://docs.langchain.com/oss/python/langchain/structured-output"},
+    {"title": "langchain-core 1.2.5：PydanticOutputParser 源码", "url": "https://github.com/langchain-ai/langchain/blob/langchain-core%3D%3D1.2.5/libs/core/langchain_core/output_parsers/pydantic.py"},
+    {"title": "LangChain 1.2.0：Agent 结构化输出源码", "url": "https://github.com/langchain-ai/langchain/blob/langchain%3D%3D1.2.0/libs/langchain_v1/langchain/agents/structured_output.py"}
+  ]
+}
